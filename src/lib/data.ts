@@ -34,34 +34,39 @@ export const currencyByCountry: Record<string, string> = {
 export interface FieldDefinition {
   id: string;
   label: string;
-  type: 'percentage' | 'currency' | 'boolean' | 'text' | 'textarea';
+  type: 'percentage' | 'currency' | 'boolean' | 'text' | 'textarea' | 'multi-currency';
   description?: string;
+  hideNote?: boolean;
+  subFields?: string[];
 }
 
 export const fields: FieldDefinition[] = [
-  { id: "cumplimiento_ans", label: "Cumplimiento ANS", type: "percentage" },
+  { id: "cumplimiento_ans", label: "Cumplimiento ANS", type: "percentage", hideNote: true },
   { id: "devoluciones", label: "% Devoluciones", type: "percentage" },
-  { id: "siniestros", label: "% Siniestros", type: "percentage" },
+  { id: "siniestros", label: "% Siniestros", type: "percentage", hideNote: true },
   { id: "regiones_superior", label: "Regiones con desempeño superior al promedio", type: "textarea" },
   { id: "regiones_inferior", label: "Regiones con desempeño menor al promedio", type: "textarea" },
   { 
     id: "costo_envio_nacional", 
     label: "Costo de un envío nacional", 
-    type: "currency",
-    description: "Tarifa con bonificación del 20% en fletes, valor declarado mínimo y recaudo de $120.000"
+    type: "multi-currency",
+    description: "Tarifa con bonificación del 20% en fletes, valor declarado mínimo y recaudo de $120.000",
+    subFields: ["Valor Con Recaudo", "Valor Sin Recaudo"]
   },
   { id: "beneficios", label: "Beneficios", type: "textarea" },
   { 
     id: "seguro_gratis", 
     label: "Seguro gratis", 
     type: "text",
-    description: "En todos los casos se paga el valor declarado"
+    description: "En todos los casos se paga el valor declarado",
+    hideNote: true
   },
   { 
     id: "costo_promedio_con_recaudo", 
     label: "Costo promedio flete con recaudo $120.000", 
-    type: "currency",
-    description: "Bonificación del 20%"
+    type: "multi-currency",
+    description: "Bonificación del 20%",
+    subFields: ["Urbano", "Regional", "Zonal", "Otros", "Especial", "Difícil Acceso", "Veredas"]
   },
   { id: "comision_recaudo", label: "% Comisión de recaudo", type: "percentage" },
   { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "percentage" },

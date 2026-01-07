@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { FieldDefinition, currencyByCountry, CellValue } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -94,6 +95,19 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     </Popover>
   );
 
+  const NoteField = () => {
+    if (field.hideNote) return null;
+    return (
+      <Textarea
+        value={localNote}
+        onChange={(e) => setLocalNote(e.target.value)}
+        onBlur={handleNoteBlur}
+        className="min-h-[50px] text-xs resize-none border-border bg-background/80"
+        placeholder="Nota adicional..."
+      />
+    );
+  };
+
   if (field.type === 'boolean') {
     return (
       <div className={cn("p-2 rounded", getColorClass())}>
@@ -110,13 +124,11 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
             {Boolean(localValue) ? 'Sí' : 'No'}
           </span>
         </div>
-        <Textarea
-          value={localNote}
-          onChange={(e) => setLocalNote(e.target.value)}
-          onBlur={handleNoteBlur}
-          className="mt-2 min-h-[50px] text-xs resize-none border-border bg-background/80"
-          placeholder="Nota adicional..."
-        />
+        {!field.hideNote && (
+          <div className="mt-2">
+            <NoteField />
+          </div>
+        )}
       </div>
     );
   }
@@ -134,6 +146,60 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
           className="min-h-[80px] text-sm resize-none border-border bg-background/80"
           placeholder="Escribir..."
         />
+      </div>
+    );
+  }
+
+  if (field.type === 'multi-currency') {
+    const subFields = field.subFields || [];
+    // Parse the value as an object or initialize empty
+    const parsedValue: Record<string, string> = typeof localValue === 'object' && localValue !== null 
+      ? (localValue as Record<string, string>)
+      : {};
+
+    const handleSubFieldChange = (subField: string, val: string) => {
+      const newValue = { ...parsedValue, [subField]: val };
+      setLocalValue(newValue as any);
+    };
+
+    const handleSubFieldBlur = () => {
+      onChange({ value: localValue, note: localNote, color: localColor });
+    };
+
+    return (
+      <div className={cn("p-2 rounded", getColorClass())}>
+        <div className="flex items-start gap-2 mb-2">
+          <ColorSelector />
+        </div>
+        <div className="space-y-2">
+          {subFields.map((subField) => (
+            <div key={subField} className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground min-w-[80px] flex-shrink-0">
+                {subField}:
+              </Label>
+              <div className="relative flex-1">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  {currency}
+                </span>
+                <Input
+                  type="number"
+                  step="100"
+                  min="0"
+                  value={parsedValue[subField] || ''}
+                  onChange={(e) => handleSubFieldChange(subField, e.target.value)}
+                  onBlur={handleSubFieldBlur}
+                  className="pl-10 text-sm border-border bg-background/80 h-8"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        {!field.hideNote && (
+          <div className="mt-2">
+            <NoteField />
+          </div>
+        )}
       </div>
     );
   }
@@ -160,13 +226,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
             </span>
           </div>
         </div>
-        <Textarea
-          value={localNote}
-          onChange={(e) => setLocalNote(e.target.value)}
-          onBlur={handleNoteBlur}
-          className="min-h-[50px] text-xs resize-none border-border bg-background/80"
-          placeholder="Nota adicional..."
-        />
+        {!field.hideNote && <NoteField />}
       </div>
     );
   }
@@ -192,13 +252,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
             />
           </div>
         </div>
-        <Textarea
-          value={localNote}
-          onChange={(e) => setLocalNote(e.target.value)}
-          onBlur={handleNoteBlur}
-          className="min-h-[50px] text-xs resize-none border-border bg-background/80"
-          placeholder="Nota adicional..."
-        />
+        {!field.hideNote && <NoteField />}
       </div>
     );
   }
@@ -217,13 +271,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
           placeholder="Escribir..."
         />
       </div>
-      <Textarea
-        value={localNote}
-        onChange={(e) => setLocalNote(e.target.value)}
-        onBlur={handleNoteBlur}
-        className="min-h-[50px] text-xs resize-none border-border bg-background/80"
-        placeholder="Nota adicional..."
-      />
+      {!field.hideNote && <NoteField />}
     </div>
   );
 }
