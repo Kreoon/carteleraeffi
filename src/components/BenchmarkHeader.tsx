@@ -28,9 +28,7 @@ export function BenchmarkHeader({
         <div className="flex items-center gap-4">
           <img alt="Efficommerce" className="h-12 w-auto" src="/lovable-uploads/8e2c6652-41e9-4a70-9651-e8e190566ba3.jpg" />
           <div>
-            <h1 className="text-xl font-semibold text-foreground">
-              Benchmark Logístico
-            </h1>
+            <h1 className="text-xl font-semibold text-foreground">Cartelera Logística</h1>
             <p className="text-sm text-muted-foreground">
               Comparación de transportadoras
             </p>
