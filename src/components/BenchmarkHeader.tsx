@@ -1,7 +1,8 @@
+import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { countries, monthNames, years } from "@/lib/data";
-import { FileDown, Save, Loader2 } from "lucide-react";
+import { FileDown, Save, Loader2, Settings } from "lucide-react";
 import efficommerceLogo from "@/assets/efficommerce-logo.png";
 
 interface BenchmarkHeaderProps {
@@ -12,7 +13,6 @@ interface BenchmarkHeaderProps {
   year: number;
   setYear: (year: number) => void;
   isSaving: boolean;
-  onGeneratePDF: () => void;
 }
 
 export function BenchmarkHeader({
@@ -23,8 +23,9 @@ export function BenchmarkHeader({
   year,
   setYear,
   isSaving,
-  onGeneratePDF
 }: BenchmarkHeaderProps) {
+  const reportUrl = `/reporte?country=${encodeURIComponent(country)}&month=${month}&year=${year}`;
+  
   return (
     <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -103,10 +104,19 @@ export function BenchmarkHeader({
             )}
           </div>
 
-          <Button onClick={onGeneratePDF} className="gap-2">
-            <FileDown className="h-4 w-4" />
-            Generar PDF
-          </Button>
+          <Link to="/configuracion">
+            <Button variant="outline" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Configuración
+            </Button>
+          </Link>
+          
+          <Link to={reportUrl}>
+            <Button className="gap-2">
+              <FileDown className="h-4 w-4" />
+              Generar Reporte
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
