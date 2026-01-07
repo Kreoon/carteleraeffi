@@ -589,7 +589,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Ideal: ≤2%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={devData} max={20} valueFormatter={(v) => `${v}%`} />
+                  <ComparisonBar items={devData} max={100} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
               <Card>
@@ -601,7 +601,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Ideal: ≤1%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={sinData} max={10} valueFormatter={(v) => `${v}%`} />
+                  <ComparisonBar items={sinData} max={100} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
             </div>
@@ -841,7 +841,7 @@ export default function Report() {
                                   <span className={`font-bold ${variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                                     {numVal}%
                                   </span>
-                                  <ProgressBar value={numVal} variant={variant} size="sm" showLabel={false} />
+                                  <ProgressBar value={numVal} max={100} variant={variant} size="sm" showLabel={false} />
                                 </div>
                               );
                             } else if (field.type === 'currency' || field.type === 'multi-currency') {
