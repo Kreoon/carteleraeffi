@@ -12,9 +12,10 @@ import {
   Quote,
   Minus,
   Link,
-  Image
+  ImageIcon
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ImageUploadButton } from "./ImageUploadButton";
 
 interface MarkdownToolbarProps {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -59,7 +60,7 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
     };
 
   const insertAtLineStart = (prefix: string) => 
-    (text: string, start: number, end: number) => {
+    (text: string, start: number, _end: number) => {
       const lineStart = text.lastIndexOf('\n', start - 1) + 1;
       const before = text.substring(0, lineStart);
       const after = text.substring(lineStart);
@@ -94,7 +95,7 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
       return { newText, newCursorPos: start + linkTemplate.length };
     };
 
-  const insertImage = () => 
+  const insertImageUrl = () => 
     (text: string, start: number, end: number) => {
       const selectedText = text.substring(start, end) || 'descripción';
       const before = text.substring(0, start);
@@ -103,6 +104,23 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
       const newText = `${before}${imageTemplate}${after}`;
       return { newText, newCursorPos: start + imageTemplate.length };
     };
+
+  const handleImageUploaded = (imageUrl: string, altText: string) => {
+    const textarea = textareaRef.current;
+    const start = textarea?.selectionStart || value.length;
+    const before = value.substring(0, start);
+    const after = value.substring(start);
+    const imageMarkdown = `![${altText}](${imageUrl})`;
+    const newText = `${before}${imageMarkdown}${after}`;
+    
+    onChange(newText);
+    
+    setTimeout(() => {
+      textarea?.focus();
+      const newPos = start + imageMarkdown.length;
+      textarea?.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
 
   const buttons: ToolbarButton[] = [
     { icon: <Bold className="h-3.5 w-3.5" />, label: "Negrita", action: wrapSelection("**") },
@@ -116,7 +134,7 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
     { icon: <Code className="h-3.5 w-3.5" />, label: "Código", action: wrapSelection("`") },
     { icon: <Minus className="h-3.5 w-3.5" />, label: "Línea horizontal", action: insertAtLineStart("\n---\n") },
     { icon: <Link className="h-3.5 w-3.5" />, label: "Enlace", action: insertLink() },
-    { icon: <Image className="h-3.5 w-3.5" />, label: "Imagen", action: insertImage() },
+    { icon: <ImageIcon className="h-3.5 w-3.5" />, label: "Imagen URL", action: insertImageUrl() },
     { icon: <Table className="h-3.5 w-3.5" />, label: "Tabla", action: insertTable() },
   ];
 
@@ -141,6 +159,12 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
             </TooltipContent>
           </Tooltip>
         ))}
+        
+        {/* Separator */}
+        <div className="w-px h-7 bg-border mx-1" />
+        
+        {/* Upload button */}
+        <ImageUploadButton onImageUploaded={handleImageUploaded} />
       </div>
     </TooltipProvider>
   );
