@@ -341,116 +341,164 @@ export default function Report() {
 
                   return (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      <div className="bg-background rounded-lg p-4 border shadow-sm">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <Trophy className="h-4 w-4 text-yellow-500" />
-                          Mejor Desempeño General
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {bestOverall.logo ? (
-                            <img src={bestOverall.logo} alt={bestOverall.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
-                          ) : (
-                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                              <Truck className="h-5 w-5 text-primary" />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <Trophy className="h-4 w-4 text-yellow-500" />
+                              Mejor Desempeño General
                             </div>
-                          )}
-                          <div>
-                            <p className="font-bold text-lg">{bestOverall.name}</p>
-                            <p className="text-xs text-muted-foreground">Puntuación: {bestOverall.score.toFixed(0)}/100</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-background rounded-lg p-4 border shadow-sm">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <Shield className="h-4 w-4 text-green-500" />
-                          Mejor Cumplimiento ANS
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {bestAns.logo ? (
-                            <img src={bestAns.logo} alt={bestAns.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
-                          ) : (
-                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                              <Truck className="h-5 w-5 text-primary" />
+                            <div className="flex items-center gap-3">
+                              {bestOverall.logo ? (
+                                <img src={bestOverall.logo} alt={bestOverall.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-5 w-5 text-primary" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-lg">{bestOverall.name}</p>
+                                <p className="text-xs text-muted-foreground">Puntuación: {bestOverall.score.toFixed(0)}/100</p>
+                              </div>
                             </div>
-                          )}
-                          <div>
-                            <p className="font-bold text-lg">{bestAns.name}</p>
-                            <p className="text-xs text-green-600 font-medium">{bestAns.ans}% de cumplimiento</p>
                           </div>
-                        </div>
-                      </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[320px] text-sm">
+                          <p className="font-semibold mb-1">🏆 Mejor Desempeño General</p>
+                          <p>Puntuación ponderada calculada con: ANS (40%), Devoluciones (30%), Siniestros (30%). Esta transportadora lidera en el balance general de indicadores.</p>
+                        </TooltipContent>
+                      </Tooltip>
 
-                      <div className="bg-background rounded-lg p-4 border shadow-sm">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <TrendingDown className="h-4 w-4 text-blue-500" />
-                          Menor Tasa de Devoluciones
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {lowestDev.logo ? (
-                            <img src={lowestDev.logo} alt={lowestDev.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
-                          ) : (
-                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                              <Truck className="h-5 w-5 text-primary" />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <Shield className="h-4 w-4 text-green-500" />
+                              Mejor Cumplimiento ANS
                             </div>
-                          )}
-                          <div>
-                            <p className="font-bold text-lg">{lowestDev.name}</p>
-                            <p className="text-xs text-blue-600 font-medium">{lowestDev.dev}% devoluciones</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-background rounded-lg p-4 border shadow-sm">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <AlertTriangle className="h-4 w-4 text-purple-500" />
-                          Menor Tasa de Siniestros
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {lowestSin.logo ? (
-                            <img src={lowestSin.logo} alt={lowestSin.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
-                          ) : (
-                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                              <Truck className="h-5 w-5 text-primary" />
+                            <div className="flex items-center gap-3">
+                              {bestAns.logo ? (
+                                <img src={bestAns.logo} alt={bestAns.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-5 w-5 text-primary" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-lg">{bestAns.name}</p>
+                                <p className="text-xs text-green-600 font-medium">{bestAns.ans}% de cumplimiento</p>
+                              </div>
                             </div>
-                          )}
-                          <div>
-                            <p className="font-bold text-lg">{lowestSin.name}</p>
-                            <p className="text-xs text-purple-600 font-medium">{lowestSin.sin}% siniestros</p>
                           </div>
-                        </div>
-                      </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[320px] text-sm">
+                          <p className="font-semibold mb-1">✅ Mejor Cumplimiento ANS</p>
+                          <p>Transportadora con mayor porcentaje de entregas a tiempo según la promesa de días de entrega. Ideal para clientes que priorizan puntualidad.</p>
+                        </TooltipContent>
+                      </Tooltip>
 
-                      <div className="bg-background rounded-lg p-4 border shadow-sm">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <Star className="h-4 w-4 text-orange-500" />
-                          Más Servicios Incluidos
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {mostServices.logo ? (
-                            <img src={mostServices.logo} alt={mostServices.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
-                          ) : (
-                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                              <Truck className="h-5 w-5 text-primary" />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <TrendingDown className="h-4 w-4 text-blue-500" />
+                              Menor Tasa de Devoluciones
                             </div>
-                          )}
-                          <div>
-                            <p className="font-bold text-lg">{mostServices.name}</p>
-                            <p className="text-xs text-orange-600 font-medium">
-                              {Number(mostServices.hasRedirect) + Number(mostServices.hasPickup) + Number(mostServices.hasSms)} servicios extra
-                            </p>
+                            <div className="flex items-center gap-3">
+                              {lowestDev.logo ? (
+                                <img src={lowestDev.logo} alt={lowestDev.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-5 w-5 text-primary" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-lg">{lowestDev.name}</p>
+                                <p className="text-xs text-blue-600 font-medium">{lowestDev.dev}% devoluciones</p>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[320px] text-sm">
+                          <p className="font-semibold mb-1">📦 Menor Tasa de Devoluciones</p>
+                          <p>Transportadora con menor porcentaje de paquetes devueltos. Recomendada para reducir costos de logística inversa y mejorar la experiencia del cliente.</p>
+                        </TooltipContent>
+                      </Tooltip>
 
-                      <div className="bg-background rounded-lg p-4 border shadow-sm">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <Truck className="h-4 w-4 text-primary" />
-                          Total Transportadoras
-                        </div>
-                        <p className="font-bold text-3xl">{carriers.length}</p>
-                        <p className="text-xs text-muted-foreground">Evaluadas en {monthName} {year}</p>
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <AlertTriangle className="h-4 w-4 text-purple-500" />
+                              Menor Tasa de Siniestros
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {lowestSin.logo ? (
+                                <img src={lowestSin.logo} alt={lowestSin.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-5 w-5 text-primary" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-lg">{lowestSin.name}</p>
+                                <p className="text-xs text-purple-600 font-medium">{lowestSin.sin}% siniestros</p>
+                              </div>
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[320px] text-sm">
+                          <p className="font-semibold mb-1">🛡️ Menor Tasa de Siniestros</p>
+                          <p>Transportadora con menor porcentaje de paquetes que pasaron a indemnización. Ideal para envíos de productos de alto valor.</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <Star className="h-4 w-4 text-orange-500" />
+                              Más Servicios Incluidos
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {mostServices.logo ? (
+                                <img src={mostServices.logo} alt={mostServices.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-5 w-5 text-primary" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-lg">{mostServices.name}</p>
+                                <p className="text-xs text-orange-600 font-medium">
+                                  {Number(mostServices.hasRedirect) + Number(mostServices.hasPickup) + Number(mostServices.hasSms)} servicios extra
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[320px] text-sm">
+                          <p className="font-semibold mb-1">⭐ Más Servicios Incluidos</p>
+                          <p>Transportadora con más servicios de valor agregado: redirección gratis, reclame en oficina y SMS gratuitos. Mejora la experiencia post-compra.</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <Truck className="h-4 w-4 text-primary" />
+                              Total Transportadoras
+                            </div>
+                            <p className="font-bold text-3xl">{carriers.length}</p>
+                            <p className="text-xs text-muted-foreground">Evaluadas en {monthName} {year}</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[320px] text-sm">
+                          <p className="font-semibold mb-1">🚚 Total Transportadoras Evaluadas</p>
+                          <p>Número de transportadoras incluidas en este benchmark para {country}. Cada una fue evaluada en múltiples indicadores de desempeño.</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   );
                 })()}
@@ -480,28 +528,41 @@ export default function Report() {
                   return (
                     <div className="space-y-3">
                       {ranked.map((carrier, index) => (
-                        <div key={carrier.name} className={`flex items-center gap-4 p-3 rounded-lg border ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200' : index === 1 ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200' : index === 2 ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200' : 'bg-background'}`}>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500 text-white' : index === 1 ? 'bg-slate-400 text-white' : index === 2 ? 'bg-orange-400 text-white' : 'bg-muted text-muted-foreground'}`}>
-                            {index + 1}
-                          </div>
-                          {carrier.logo ? (
-                            <img src={carrier.logo} alt={carrier.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
-                          ) : (
-                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                              <Truck className="h-5 w-5 text-primary" />
+                        <Tooltip key={carrier.name}>
+                          <TooltipTrigger asChild>
+                            <div className={`flex items-center gap-4 p-3 rounded-lg border cursor-help hover:shadow-md transition-shadow ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200' : index === 1 ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200' : index === 2 ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200' : 'bg-background'}`}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500 text-white' : index === 1 ? 'bg-slate-400 text-white' : index === 2 ? 'bg-orange-400 text-white' : 'bg-muted text-muted-foreground'}`}>
+                                {index + 1}
+                              </div>
+                              {carrier.logo ? (
+                                <img src={carrier.logo} alt={carrier.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-5 w-5 text-primary" />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <p className="font-semibold">{carrier.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ANS: {carrier.ans}% | Dev: {carrier.dev}% | Sin: {carrier.sin}%
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-lg">{carrier.score.toFixed(0)}</p>
+                                <p className="text-xs text-muted-foreground">puntos</p>
+                              </div>
                             </div>
-                          )}
-                          <div className="flex-1">
-                            <p className="font-semibold">{carrier.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              ANS: {carrier.ans}% | Dev: {carrier.dev}% | Sin: {carrier.sin}%
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-lg">{carrier.score.toFixed(0)}</p>
-                            <p className="text-xs text-muted-foreground">puntos</p>
-                          </div>
-                        </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-[350px] text-sm">
+                            <p className="font-semibold mb-2">{carrier.name} - Posición #{index + 1}</p>
+                            <div className="space-y-1">
+                              <p>• <strong>ANS:</strong> {carrier.ans}% {carrier.ans >= 95 ? '✅ Excelente' : carrier.ans >= 85 ? '⚠️ Aceptable' : '❌ Bajo'}</p>
+                              <p>• <strong>Devoluciones:</strong> {carrier.dev}% {carrier.dev <= 2 ? '✅ Excelente' : carrier.dev <= 5 ? '⚠️ Aceptable' : '❌ Alto'}</p>
+                              <p>• <strong>Siniestros:</strong> {carrier.sin}% {carrier.sin <= 1 ? '✅ Excelente' : carrier.sin <= 3 ? '⚠️ Aceptable' : '❌ Alto'}</p>
+                            </div>
+                            <p className="mt-2 text-muted-foreground">Puntuación: ANS×40% + (100-Dev×5)×30% + (100-Sin×10)×30%</p>
+                          </TooltipContent>
+                        </Tooltip>
                       ))}
                     </div>
                   );
