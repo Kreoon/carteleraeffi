@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_reports: {
+        Row: {
+          country: string
+          created_at: string
+          data: Json
+          id: string
+          month: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          data: Json
+          id?: string
+          month: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          month?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
