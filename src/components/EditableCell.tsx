@@ -22,7 +22,7 @@ const colorOptions = [
 ] as const;
 
 export function EditableCell({ field, cellValue, onChange, country }: EditableCellProps) {
-  const [localValue, setLocalValue] = useState(cellValue.value);
+  const [localValue, setLocalValue] = useState<any>(cellValue.value);
   const [localNote, setLocalNote] = useState(cellValue.note || '');
   const [localColor, setLocalColor] = useState<CellValue['color']>(cellValue.color || 'none');
   const currency = currencyByCountry[country] || "COP";
@@ -33,22 +33,20 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     setLocalColor(cellValue.color || 'none');
   }, [cellValue]);
 
-  const handleBlur = useCallback(() => {
-    if (localValue !== cellValue.value || localNote !== cellValue.note || localColor !== cellValue.color) {
-      onChange({ value: localValue, note: localNote, color: localColor });
-    }
-  }, [localValue, localNote, localColor, cellValue, onChange]);
+  const handleValueChange = useCallback((newValue: any) => {
+    setLocalValue(newValue);
+    onChange({ value: newValue, note: localNote, color: localColor });
+  }, [localNote, localColor, onChange]);
+
+  const handleNoteChange = useCallback((newNote: string) => {
+    setLocalNote(newNote);
+    onChange({ value: localValue, note: newNote, color: localColor });
+  }, [localValue, localColor, onChange]);
 
   const handleColorChange = useCallback((color: CellValue['color']) => {
     setLocalColor(color);
     onChange({ value: localValue, note: localNote, color });
   }, [localValue, localNote, onChange]);
-
-  const handleNoteBlur = useCallback(() => {
-    if (localNote !== cellValue.note) {
-      onChange({ value: localValue, note: localNote, color: localColor });
-    }
-  }, [localValue, localNote, localColor, cellValue, onChange]);
 
   const getColorClass = () => {
     switch (localColor) {
@@ -100,8 +98,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     return (
       <Textarea
         value={localNote}
-        onChange={(e) => setLocalNote(e.target.value)}
-        onBlur={handleNoteBlur}
+        onChange={(e) => handleNoteChange(e.target.value)}
         className="min-h-[50px] text-xs resize-none border-border bg-background/80"
         placeholder="Nota adicional..."
       />
@@ -115,10 +112,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
           <ColorSelector />
           <Switch
             checked={Boolean(localValue)}
-            onCheckedChange={(checked) => {
-              setLocalValue(checked);
-              onChange({ value: checked, note: localNote, color: localColor });
-            }}
+            onCheckedChange={(checked) => handleValueChange(checked)}
           />
           <span className="text-sm text-foreground">
             {Boolean(localValue) ? 'Sí' : 'No'}
@@ -141,8 +135,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
         </div>
         <Textarea
           value={String(localValue || '')}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={handleBlur}
+          onChange={(e) => handleValueChange(e.target.value)}
           className="min-h-[80px] text-sm resize-none border-border bg-background/80"
           placeholder="Escribir..."
         />
@@ -152,18 +145,13 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
 
   if (field.type === 'multi-currency') {
     const subFields = field.subFields || [];
-    // Parse the value as an object or initialize empty
     const parsedValue: Record<string, string> = typeof localValue === 'object' && localValue !== null 
       ? (localValue as Record<string, string>)
       : {};
 
     const handleSubFieldChange = (subField: string, val: string) => {
       const newValue = { ...parsedValue, [subField]: val };
-      setLocalValue(newValue as any);
-    };
-
-    const handleSubFieldBlur = () => {
-      onChange({ value: localValue, note: localNote, color: localColor });
+      handleValueChange(newValue);
     };
 
     return (
@@ -187,7 +175,6 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
                   min="0"
                   value={parsedValue[subField] || ''}
                   onChange={(e) => handleSubFieldChange(subField, e.target.value)}
-                  onBlur={handleSubFieldBlur}
                   className="pl-10 text-sm border-border bg-background/80 h-8"
                   placeholder="0"
                 />
@@ -216,8 +203,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
               min="0"
               max="100"
               value={String(localValue || '')}
-              onChange={(e) => setLocalValue(e.target.value)}
-              onBlur={handleBlur}
+              onChange={(e) => handleValueChange(e.target.value)}
               className="pr-8 text-sm border-border bg-background/80"
               placeholder="0.00"
             />
@@ -245,8 +231,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
               step="100"
               min="0"
               value={String(localValue || '')}
-              onChange={(e) => setLocalValue(e.target.value)}
-              onBlur={handleBlur}
+              onChange={(e) => handleValueChange(e.target.value)}
               className="pl-12 text-sm border-border bg-background/80"
               placeholder="0"
             />
@@ -265,8 +250,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
         <Input
           type="text"
           value={String(localValue || '')}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={handleBlur}
+          onChange={(e) => handleValueChange(e.target.value)}
           className="text-sm border-border bg-background/80 flex-1"
           placeholder="Escribir..."
         />
