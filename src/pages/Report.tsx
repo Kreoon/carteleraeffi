@@ -527,11 +527,11 @@ export default function Report() {
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b bg-muted/50">
-                        <th className="text-left p-4 font-semibold min-w-[200px] sticky left-0 bg-muted/50 z-10">Campo</th>
+                        <th className="text-left p-4 font-semibold min-w-[200px] sticky left-0 bg-slate-100 dark:bg-slate-800 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Campo</th>
                         {carriers.map(carrier => {
                           const logoUrl = getCarrierLogo(carrier);
                           return (
-                            <th key={carrier} className="text-center p-4 font-semibold min-w-[180px]">
+                            <th key={carrier} className="text-center p-4 font-semibold min-w-[180px] bg-muted/50">
                               <div className="flex flex-col items-center gap-2">
                                 {logoUrl ? (
                                   <img src={logoUrl} alt={carrier} className="w-10 h-10 object-contain rounded-lg bg-white p-1 border" />
@@ -550,7 +550,7 @@ export default function Report() {
                     <tbody>
                       {fields.map((field, fieldIndex) => (
                         <tr key={field.id} className={`border-b ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
-                          <td className={`p-4 font-medium sticky left-0 z-10 ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
+                          <td className={`p-4 font-medium sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${fieldIndex % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
                             <div className="flex flex-col">
                               <span className="text-foreground">{field.label}</span>
                               {field.description && (
