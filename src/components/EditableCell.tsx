@@ -25,6 +25,51 @@ const colorOptions = [
   { value: 'red', label: 'Rojo', className: 'bg-danger-bg border-danger' },
 ] as const;
 
+// Extracted ColorSelector component
+function ColorSelector({ 
+  localColor, 
+  onColorChange 
+}: { 
+  localColor: CellValue['color']; 
+  onColorChange: (color: CellValue['color']) => void;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button 
+          className={cn(
+            "w-5 h-5 rounded border-2 flex-shrink-0 hover:scale-110 transition-transform",
+            localColor === 'green' && 'bg-success border-success',
+            localColor === 'yellow' && 'bg-warning border-warning',
+            localColor === 'red' && 'bg-danger border-danger',
+            localColor === 'none' && 'bg-muted border-border'
+          )}
+          title="Cambiar color"
+        />
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-2 bg-popover border-border" align="start">
+        <div className="flex gap-2">
+          {colorOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onColorChange(option.value)}
+              className={cn(
+                "w-6 h-6 rounded border-2 hover:scale-110 transition-transform",
+                option.value === 'green' && 'bg-success border-success',
+                option.value === 'yellow' && 'bg-warning border-warning',
+                option.value === 'red' && 'bg-danger border-danger',
+                option.value === 'none' && 'bg-muted border-border',
+                localColor === option.value && 'ring-2 ring-primary ring-offset-1'
+              )}
+              title={option.label}
+            />
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function EditableCell({ field, cellValue, onChange, country }: EditableCellProps) {
   const [localValue, setLocalValue] = useState<any>(cellValue.value);
   const [localNote, setLocalNote] = useState(cellValue.note || '');
@@ -63,59 +108,20 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     }
   };
 
-  const ColorSelector = () => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button 
-          className={cn(
-            "w-5 h-5 rounded border-2 flex-shrink-0 hover:scale-110 transition-transform",
-            localColor === 'green' && 'bg-success border-success',
-            localColor === 'yellow' && 'bg-warning border-warning',
-            localColor === 'red' && 'bg-danger border-danger',
-            localColor === 'none' && 'bg-muted border-border'
-          )}
-          title="Cambiar color"
-        />
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-2 bg-popover border-border" align="start">
-        <div className="flex gap-2">
-          {colorOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => handleColorChange(option.value)}
-              className={cn(
-                "w-6 h-6 rounded border-2 hover:scale-110 transition-transform",
-                option.value === 'green' && 'bg-success border-success',
-                option.value === 'yellow' && 'bg-warning border-warning',
-                option.value === 'red' && 'bg-danger border-danger',
-                option.value === 'none' && 'bg-muted border-border',
-                localColor === option.value && 'ring-2 ring-primary ring-offset-1'
-              )}
-              title={option.label}
-            />
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-
-  const NoteField = () => {
-    if (field.hideNote) return null;
-    return (
-      <Textarea
-        value={localNote}
-        onChange={(e) => handleNoteChange(e.target.value)}
-        className="min-h-[50px] text-xs resize-none border-border bg-background/80"
-        placeholder="Nota adicional..."
-      />
-    );
-  };
+  const noteField = !field.hideNote ? (
+    <Textarea
+      value={localNote}
+      onChange={(e) => handleNoteChange(e.target.value)}
+      className="min-h-[50px] text-xs resize-none border-border bg-background/80"
+      placeholder="Nota adicional..."
+    />
+  ) : null;
 
   if (field.type === 'boolean') {
     return (
       <div className={cn("p-2 rounded", getColorClass())}>
         <div className="flex items-center gap-2">
-          <ColorSelector />
+          <ColorSelector localColor={localColor} onColorChange={handleColorChange} />
           <Switch
             checked={Boolean(localValue)}
             onCheckedChange={(checked) => handleValueChange(checked)}
@@ -126,7 +132,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
         </div>
         {!field.hideNote && (
           <div className="mt-2">
-            <NoteField />
+            {noteField}
           </div>
         )}
       </div>
@@ -139,7 +145,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     return (
       <div className={cn("p-2 rounded", getColorClass())}>
         <div className="flex items-center gap-2 mb-2">
-          <ColorSelector />
+          <ColorSelector localColor={localColor} onColorChange={handleColorChange} />
           <div className="flex gap-1 ml-auto">
             <Button
               variant={isEditing ? "default" : "outline"}
@@ -221,7 +227,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     return (
       <div className={cn("p-2 rounded", getColorClass())}>
         <div className="flex items-start gap-2 mb-2">
-          <ColorSelector />
+          <ColorSelector localColor={localColor} onColorChange={handleColorChange} />
         </div>
         <div className="space-y-2">
           {subFields.map((subField) => (
@@ -248,7 +254,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
         </div>
         {!field.hideNote && (
           <div className="mt-2">
-            <NoteField />
+            {noteField}
           </div>
         )}
       </div>
@@ -259,7 +265,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     return (
       <div className={cn("p-2 rounded", getColorClass())}>
         <div className="flex items-center gap-2 mb-2">
-          <ColorSelector />
+          <ColorSelector localColor={localColor} onColorChange={handleColorChange} />
           <div className="relative flex-1">
             <Input
               type="number"
@@ -276,7 +282,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
             </span>
           </div>
         </div>
-        {!field.hideNote && <NoteField />}
+        {noteField}
       </div>
     );
   }
@@ -285,7 +291,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
     return (
       <div className={cn("p-2 rounded", getColorClass())}>
         <div className="flex items-center gap-2 mb-2">
-          <ColorSelector />
+          <ColorSelector localColor={localColor} onColorChange={handleColorChange} />
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
               {currency}
@@ -301,7 +307,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
             />
           </div>
         </div>
-        {!field.hideNote && <NoteField />}
+        {noteField}
       </div>
     );
   }
@@ -310,7 +316,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
   return (
     <div className={cn("p-2 rounded", getColorClass())}>
       <div className="flex items-center gap-2 mb-2">
-        <ColorSelector />
+        <ColorSelector localColor={localColor} onColorChange={handleColorChange} />
         <Input
           type="text"
           value={String(localValue || '')}
@@ -319,7 +325,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
           placeholder="Escribir..."
         />
       </div>
-      {!field.hideNote && <NoteField />}
+      {noteField}
     </div>
   );
 }
