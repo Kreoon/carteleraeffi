@@ -521,38 +521,120 @@ export default function Report() {
               <p className="text-muted-foreground">Todos los campos y datos recopilados</p>
             </div>
 
-            {carriers.map(carrier => {
-              const logoUrl = getCarrierLogo(carrier);
-              
-              return (
-                <Card key={carrier} className="overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
-                    <div className="flex items-center gap-4">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt={carrier} className="w-16 h-16 object-contain rounded-xl bg-white p-2 border shadow" />
-                      ) : (
-                        <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center">
-                          <Truck className="h-8 w-8 text-primary" />
-                        </div>
-                      )}
-                      <div>
-                        <CardTitle className="text-2xl">{carrier}</CardTitle>
-                        <CardDescription>Información completa del benchmark</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {fields.map(field => (
-                        <div key={field.id}>
-                          {renderFieldValue(carrier, field)}
-                        </div>
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left p-4 font-semibold min-w-[200px] sticky left-0 bg-muted/50 z-10">Campo</th>
+                        {carriers.map(carrier => {
+                          const logoUrl = getCarrierLogo(carrier);
+                          return (
+                            <th key={carrier} className="text-center p-4 font-semibold min-w-[180px]">
+                              <div className="flex flex-col items-center gap-2">
+                                {logoUrl ? (
+                                  <img src={logoUrl} alt={carrier} className="w-10 h-10 object-contain rounded-lg bg-white p-1 border" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <Truck className="h-5 w-5 text-primary" />
+                                  </div>
+                                )}
+                                <span>{carrier}</span>
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fields.map((field, fieldIndex) => (
+                        <tr key={field.id} className={`border-b ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
+                          <td className={`p-4 font-medium sticky left-0 z-10 ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
+                            <div className="flex flex-col">
+                              <span className="text-foreground">{field.label}</span>
+                              {field.description && (
+                                <span className="text-xs text-muted-foreground">{field.description}</span>
+                              )}
+                            </div>
+                          </td>
+                          {carriers.map(carrier => {
+                            const cellValue = getCellValue(carrier, field.id);
+                            const value = cellValue.value;
+                            const note = cellValue.note;
+                            const color = cellValue.color;
+
+                            const colorClasses = {
+                              green: 'bg-green-50 dark:bg-green-950/30',
+                              yellow: 'bg-yellow-50 dark:bg-yellow-950/30',
+                              red: 'bg-red-50 dark:bg-red-950/30',
+                              none: ''
+                            };
+
+                            let displayContent: React.ReactNode = '-';
+
+                            if (field.type === 'boolean') {
+                              displayContent = value ? (
+                                <Badge variant="default" className="gap-1 bg-green-500">
+                                  <CheckCircle className="h-3 w-3" /> Sí
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive" className="gap-1">
+                                  <XCircle className="h-3 w-3" /> No
+                                </Badge>
+                              );
+                            } else if (field.type === 'percentage') {
+                              const numVal = parseFloat(String(value || 0));
+                              const variant = getColorVariant(field.id, numVal);
+                              displayContent = (
+                                <div className="space-y-1 w-full max-w-[120px] mx-auto">
+                                  <span className={`font-bold ${variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                                    {numVal}%
+                                  </span>
+                                  <ProgressBar value={numVal} variant={variant} size="sm" showLabel={false} />
+                                </div>
+                              );
+                            } else if (field.type === 'currency' || field.type === 'multi-currency') {
+                              if (typeof value === 'object' && value !== null) {
+                                displayContent = (
+                                  <div className="space-y-1 text-xs">
+                                    {Object.entries(value as Record<string, any>).map(([key, val]) => (
+                                      <div key={key} className="flex justify-between gap-2">
+                                        <span className="text-muted-foreground">{key}:</span>
+                                        <span className="font-medium">{currency} {Number(val || 0).toLocaleString()}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              } else {
+                                displayContent = value ? `${currency} ${Number(value).toLocaleString()}` : '-';
+                              }
+                            } else if (field.type === 'textarea' || field.type === 'text') {
+                              displayContent = <MarkdownContent content={String(value || '')} />;
+                            } else {
+                              displayContent = String(value || '-');
+                            }
+
+                            return (
+                              <td key={carrier} className={`p-4 text-center ${colorClasses[color || 'none']}`}>
+                                <div className="flex flex-col items-center gap-1">
+                                  {displayContent}
+                                  {note && (
+                                    <div className="text-xs text-muted-foreground italic mt-1 max-w-[150px]">
+                                      <MarkdownContent content={note} />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
