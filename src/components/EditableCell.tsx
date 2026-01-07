@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,7 @@ import { FieldDefinition, currencyByCountry, CellValue } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Eye, Edit } from 'lucide-react';
+import { MarkdownToolbar } from './MarkdownToolbar';
 
 interface EditableCellProps {
   field: FieldDefinition;
@@ -132,6 +133,7 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
 
   if (field.type === 'textarea') {
     const [isEditing, setIsEditing] = useState(true);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const hasContent = String(localValue || '').trim().length > 0;
 
     return (
@@ -159,12 +161,20 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
           </div>
         </div>
         {isEditing ? (
-          <Textarea
-            value={String(localValue || '')}
-            onChange={(e) => handleValueChange(e.target.value)}
-            className="min-h-[100px] text-sm resize-y border-border bg-background/80 font-mono"
-            placeholder="Soporta Markdown: **negrita**, *cursiva*, - listas, | tablas |"
-          />
+          <div className="space-y-0">
+            <MarkdownToolbar 
+              textareaRef={textareaRef}
+              value={String(localValue || '')}
+              onChange={handleValueChange}
+            />
+            <Textarea
+              ref={textareaRef}
+              value={String(localValue || '')}
+              onChange={(e) => handleValueChange(e.target.value)}
+              className="min-h-[100px] text-sm resize-y border-border bg-background/80 font-mono rounded-t-none border-t-0"
+              placeholder="Escribe usando Markdown..."
+            />
+          </div>
         ) : (
           <div className="prose prose-sm max-w-none dark:prose-invert bg-background/80 border border-border rounded-md p-3 min-h-[100px] overflow-auto">
             <ReactMarkdown

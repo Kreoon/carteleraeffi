@@ -57,7 +57,7 @@ export const fields: FieldDefinition[] = [
   { 
     id: "seguro_gratis", 
     label: "Seguro gratis", 
-    type: "text",
+    type: "textarea",
     description: "En todos los casos se paga el valor declarado",
     hideNote: true
   },
@@ -69,7 +69,7 @@ export const fields: FieldDefinition[] = [
     subFields: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
   },
   { id: "comision_recaudo", label: "% Comisión de recaudo", type: "textarea" },
-  { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "percentage" },
+  { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "textarea" },
   { id: "politica_peso", label: "Política de peso (peso mínimo a cobrar)", type: "text" },
   { 
     id: "costo_promedio_sin_recaudo", 
