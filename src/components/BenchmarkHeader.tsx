@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { countries, monthNames, years } from "@/lib/data";
 import { FileDown, Save, Loader2, Settings, FolderOpen } from "lucide-react";
 import efficommerceLogo from "@/assets/efficommerce-logo.png";
-
 interface BenchmarkHeaderProps {
   country: string;
   setCountry: (country: string) => void;
@@ -14,7 +13,6 @@ interface BenchmarkHeaderProps {
   setYear: (year: number) => void;
   isSaving: boolean;
 }
-
 export function BenchmarkHeader({
   country,
   setCountry,
@@ -22,19 +20,13 @@ export function BenchmarkHeader({
   setMonth,
   year,
   setYear,
-  isSaving,
+  isSaving
 }: BenchmarkHeaderProps) {
   const reportUrl = `/reporte?country=${encodeURIComponent(country)}&month=${month}&year=${year}`;
-  
-  return (
-    <header className="bg-card border-b border-border px-6 py-4">
+  return <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <img 
-            src={efficommerceLogo} 
-            alt="Efficommerce" 
-            className="h-12 w-auto"
-          />
+          <img alt="Efficommerce" className="h-12 w-auto" src="/lovable-uploads/8e2c6652-41e9-4a70-9651-e8e190566ba3.jpg" />
           <div>
             <h1 className="text-xl font-semibold text-foreground">
               Benchmark Logístico
@@ -52,56 +44,46 @@ export function BenchmarkHeader({
                 <SelectValue placeholder="Seleccionar país" />
               </SelectTrigger>
               <SelectContent>
-                {countries.map((c) => (
-                  <SelectItem key={c} value={c}>
+                {countries.map(c => <SelectItem key={c} value={c}>
                     {c}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center gap-2">
-            <Select value={month.toString()} onValueChange={(v) => setMonth(parseInt(v))}>
+            <Select value={month.toString()} onValueChange={v => setMonth(parseInt(v))}>
               <SelectTrigger className="w-[140px] bg-background">
                 <SelectValue placeholder="Mes" />
               </SelectTrigger>
               <SelectContent>
-                {monthNames.map((m, i) => (
-                  <SelectItem key={i} value={i.toString()}>
+                {monthNames.map((m, i) => <SelectItem key={i} value={i.toString()}>
                     {m}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
 
-            <Select value={year.toString()} onValueChange={(v) => setYear(parseInt(v))}>
+            <Select value={year.toString()} onValueChange={v => setYear(parseInt(v))}>
               <SelectTrigger className="w-[100px] bg-background">
                 <SelectValue placeholder="Año" />
               </SelectTrigger>
               <SelectContent>
-                {years.map((y) => (
-                  <SelectItem key={y} value={y.toString()}>
+                {years.map(y => <SelectItem key={y} value={y.toString()}>
                     {y}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center gap-2">
-            {isSaving && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            {isSaving && <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Guardando...</span>
-              </div>
-            )}
-            {!isSaving && (
-              <div className="flex items-center gap-1 text-sm text-success">
+              </div>}
+            {!isSaving && <div className="flex items-center gap-1 text-sm text-success">
                 <Save className="h-4 w-4" />
                 <span>Guardado</span>
-              </div>
-            )}
+              </div>}
           </div>
 
           <Link to="/reportes-guardados">
@@ -126,6 +108,5 @@ export function BenchmarkHeader({
           </Link>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 }
