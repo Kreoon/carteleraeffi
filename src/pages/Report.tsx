@@ -565,9 +565,9 @@ export default function Report() {
                             const color = cellValue.color;
 
                             const colorClasses = {
-                              green: 'bg-green-50 dark:bg-green-950/30',
-                              yellow: 'bg-yellow-50 dark:bg-yellow-950/30',
-                              red: 'bg-red-50 dark:bg-red-950/30',
+                              green: 'bg-green-100 dark:bg-green-900/50 border-l-4 border-l-green-500',
+                              yellow: 'bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-l-yellow-500',
+                              red: 'bg-red-100 dark:bg-red-900/50 border-l-4 border-l-red-500',
                               none: ''
                             };
 
