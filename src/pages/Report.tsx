@@ -619,7 +619,7 @@ export default function Report() {
                               <td key={carrier} className={`p-4 text-center ${colorClasses[color || 'none']}`}>
                                 <div className="flex flex-col items-center gap-1">
                                   {displayContent}
-                                  {note && (
+                                  {note && !field.hideNote && (
                                     <div className="text-xs text-muted-foreground italic mt-1 max-w-[150px]">
                                       <MarkdownContent content={note} />
                                     </div>
