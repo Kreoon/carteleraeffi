@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save, Trophy, Star, Info } from 'lucide-react';
+import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save, Trophy, Star, Info, Download } from 'lucide-react';
+import { generateFullHTML } from '@/components/HTMLExportGenerator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,64 +68,34 @@ export default function Report() {
     return 'success';
   };
 
-  const downloadHTML = () => {
-    if (!reportRef.current) return;
-    
-    const styles = `
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
-        body { background: #f8fafc; color: #1e293b; line-height: 1.6; }
-        .report { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        img { max-width: 100%; height: auto; }
-        .header { background: linear-gradient(135deg, #0891b2, #0e7490); color: white; padding: 40px; border-radius: 16px; margin-bottom: 24px; text-align: center; }
-        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .grid { display: grid; gap: 16px; }
-        .grid-2 { grid-template-columns: repeat(2, 1fr); }
-        .grid-3 { grid-template-columns: repeat(3, 1fr); }
-        .grid-4 { grid-template-columns: repeat(4, 1fr); }
-        @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f8fafc; font-weight: 600; }
-        .badge { display: inline-flex; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
-        .badge-green { background: #dcfce7; color: #166534; }
-        .badge-yellow { background: #fef3c7; color: #92400e; }
-        .badge-red { background: #fee2e2; color: #991b1b; }
-        .progress { height: 8px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; }
-        .progress-bar { height: 100%; border-radius: 9999px; }
-        .text-green { color: #16a34a; }
-        .text-yellow { color: #ca8a04; }
-        .text-red { color: #dc2626; }
-        .text-muted { color: #64748b; }
-        .font-bold { font-weight: 700; }
-        .text-center { text-align: center; }
-        .mb-4 { margin-bottom: 16px; }
-        .mt-4 { margin-top: 16px; }
-      </style>
-    `;
-    
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Benchmark Logístico - ${country} - ${monthName} ${year}</title>
-  ${styles}
-</head>
-<body>
-  <div class="report">
-    ${reportRef.current.innerHTML}
-  </div>
-</body>
-</html>`;
+  const [isExporting, setIsExporting] = useState(false);
 
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `benchmark-${country.toLowerCase()}-${monthName.toLowerCase()}-${year}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const downloadHTML = async () => {
+    setIsExporting(true);
+    try {
+      const html = await generateFullHTML({
+        country,
+        month,
+        year,
+        data,
+        bannerUrl,
+        getCarrierLogo
+      });
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `benchmark-${country.toLowerCase()}-${monthName.toLowerCase()}-${year}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('HTML exportado correctamente');
+    } catch (error) {
+      console.error('Error exporting HTML:', error);
+      toast.error('Error al exportar el HTML');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const downloadPDF = () => {
@@ -249,9 +220,13 @@ export default function Report() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={downloadHTML} className="gap-2">
-              <Code className="h-4 w-4" />
-              Descargar HTML
+            <Button variant="outline" onClick={downloadHTML} className="gap-2" disabled={isExporting}>
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isExporting ? 'Exportando...' : 'Descargar HTML'}
             </Button>
             <Button onClick={downloadPDF} className="gap-2">
               <FileText className="h-4 w-4" />
