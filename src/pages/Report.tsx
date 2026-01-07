@@ -1,15 +1,17 @@
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield } from 'lucide-react';
+import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBenchmarkData } from '@/hooks/useBenchmarkData';
 import { useBenchmarkConfig } from '@/hooks/useBenchmarkConfig';
+import { useSavedReports } from '@/hooks/useSavedReports';
 import { carriersByCountry, fields, monthNames, currencyByCountry, normalizeCellValue, FieldDefinition } from '@/lib/data';
 import { ProgressBar, ComparisonBar } from '@/components/ui/progress-bar';
 import { MarkdownContent } from '@/components/MarkdownContent';
+import { toast } from 'sonner';
 import efficommerceLogo from "@/assets/efficommerce-logo.png";
 
 export default function Report() {
@@ -17,15 +19,30 @@ export default function Report() {
   const country = searchParams.get('country') || 'Colombia';
   const month = parseInt(searchParams.get('month') || '9');
   const year = parseInt(searchParams.get('year') || '2025');
+  const isSavedView = searchParams.get('saved') === 'true';
   
   const { data } = useBenchmarkData(country, year, month);
   const { getCountryBanner, getCarrierLogo, isLoading: configLoading } = useBenchmarkConfig();
+  const { saveReport } = useSavedReports();
   const reportRef = useRef<HTMLDivElement>(null);
+  const [hasSaved, setHasSaved] = useState(false);
   
   const carriers = carriersByCountry[country] || [];
   const currency = currencyByCountry[country] || 'COP';
   const monthName = monthNames[month];
   const bannerUrl = getCountryBanner(country);
+
+  // Auto-save report when viewing (not from saved view)
+  useEffect(() => {
+    if (!isSavedView && data && Object.keys(data).length > 0 && !hasSaved) {
+      saveReport(country, year, month, data).then((success) => {
+        if (success) {
+          setHasSaved(true);
+          toast.success('Reporte guardado automáticamente');
+        }
+      });
+    }
+  }, [data, country, year, month, isSavedView, saveReport, hasSaved]);
 
   const getCellValue = (carrier: string, fieldId: string) => {
     const cellData = data[carrier]?.[fieldId];

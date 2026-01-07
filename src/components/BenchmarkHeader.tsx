@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { countries, monthNames, years } from "@/lib/data";
-import { FileDown, Save, Loader2, Settings } from "lucide-react";
+import { FileDown, Save, Loader2, Settings, FolderOpen } from "lucide-react";
 import efficommerceLogo from "@/assets/efficommerce-logo.png";
 
 interface BenchmarkHeaderProps {
@@ -103,6 +103,13 @@ export function BenchmarkHeader({
               </div>
             )}
           </div>
+
+          <Link to="/reportes-guardados">
+            <Button variant="outline" className="gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Reportes Guardados
+            </Button>
+          </Link>
 
           <Link to="/configuracion">
             <Button variant="outline" className="gap-2">
