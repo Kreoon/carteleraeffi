@@ -83,8 +83,23 @@ export const fields: FieldDefinition[] = [
   { id: "cubrimiento", label: "Cubrimiento", type: "textarea" }
 ];
 
-// Type for benchmark data
-export type BenchmarkData = Record<string, Record<string, string | number | boolean>>;
+// Cell value structure (supports value + note + color)
+export interface CellValue {
+  value: string | number | boolean;
+  note?: string;
+  color?: 'green' | 'yellow' | 'red' | 'none';
+}
+
+// Type for benchmark data - each cell can be a simple value or CellValue object
+export type BenchmarkData = Record<string, Record<string, CellValue>>;
+
+// Helper to normalize cell values
+export function normalizeCellValue(val: any): CellValue {
+  if (val && typeof val === 'object' && 'value' in val) {
+    return val as CellValue;
+  }
+  return { value: val ?? '', note: '', color: 'none' };
+}
 
 // Month names in Spanish
 export const monthNames = [

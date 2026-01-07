@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BenchmarkData, carriersByCountry, fields } from '@/lib/data';
+import { BenchmarkData, CellValue, carriersByCountry, fields, normalizeCellValue } from '@/lib/data';
 
 const STORAGE_KEY = 'efficommerce_benchmark_data';
 
@@ -20,38 +20,41 @@ export function useBenchmarkData(country: string, year: number, month: number) {
       if (stored) {
         const allData: StoredData = JSON.parse(stored);
         if (allData[storageKey]) {
-          setData(allData[storageKey]);
-        } else {
-          // Initialize empty data structure for carriers
-          const carriers = carriersByCountry[country] || [];
-          const initialData: BenchmarkData = {};
-          carriers.forEach(carrier => {
-            initialData[carrier] = {};
-            fields.forEach(field => {
-              if (field.type === 'boolean') {
-                initialData[carrier][field.id] = false;
-              } else if (field.type === 'percentage' || field.type === 'currency') {
-                initialData[carrier][field.id] = '';
-              } else {
-                initialData[carrier][field.id] = '';
-              }
+          // Normalize all values to CellValue format
+          const loadedData = allData[storageKey];
+          const normalizedData: BenchmarkData = {};
+          Object.keys(loadedData).forEach(carrier => {
+            normalizedData[carrier] = {};
+            Object.keys(loadedData[carrier]).forEach(fieldId => {
+              normalizedData[carrier][fieldId] = normalizeCellValue(loadedData[carrier][fieldId]);
             });
           });
-          setData(initialData);
+          setData(normalizedData);
+        } else {
+          // Initialize empty data structure for carriers
+          initializeData();
         }
       } else {
-        // Initialize empty data
-        const carriers = carriersByCountry[country] || [];
-        const initialData: BenchmarkData = {};
-        carriers.forEach(carrier => {
-          initialData[carrier] = {};
-        });
-        setData(initialData);
+        initializeData();
       }
     } catch (error) {
       console.error('Error loading benchmark data:', error);
+      initializeData();
     }
   }, [country, year, month, storageKey]);
+
+  const initializeData = () => {
+    const carriers = carriersByCountry[country] || [];
+    const initialData: BenchmarkData = {};
+    carriers.forEach(carrier => {
+      initialData[carrier] = {};
+      fields.forEach(field => {
+        const defaultValue = field.type === 'boolean' ? false : '';
+        initialData[carrier][field.id] = { value: defaultValue, note: '', color: 'none' };
+      });
+    });
+    setData(initialData);
+  };
 
   // Save data to localStorage
   const saveData = useCallback((newData: BenchmarkData) => {
@@ -69,13 +72,13 @@ export function useBenchmarkData(country: string, year: number, month: number) {
   }, [storageKey]);
 
   // Update a single cell
-  const updateCell = useCallback((carrier: string, fieldId: string, value: string | number | boolean) => {
+  const updateCell = useCallback((carrier: string, fieldId: string, cellValue: CellValue) => {
     setData(prevData => {
-      const newData = {
+      const newData: BenchmarkData = {
         ...prevData,
         [carrier]: {
           ...prevData[carrier],
-          [fieldId]: value
+          [fieldId]: cellValue
         }
       };
       saveData(newData);

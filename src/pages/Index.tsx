@@ -3,6 +3,7 @@ import { BenchmarkHeader } from '@/components/BenchmarkHeader';
 import { BenchmarkTable } from '@/components/BenchmarkTable';
 import { useBenchmarkData } from '@/hooks/useBenchmarkData';
 import { generatePDF } from '@/components/PDFGenerator';
+import { CellValue } from '@/lib/data';
 
 const Index = () => {
   const currentDate = new Date();
@@ -14,6 +15,10 @@ const Index = () => {
 
   const handleGeneratePDF = () => {
     generatePDF({ country, month, year, data });
+  };
+
+  const handleCellChange = (carrier: string, fieldId: string, value: CellValue) => {
+    updateCell(carrier, fieldId, value);
   };
 
   return (
@@ -33,7 +38,7 @@ const Index = () => {
         <BenchmarkTable
           country={country}
           data={data}
-          onCellChange={updateCell}
+          onCellChange={handleCellChange}
         />
       </main>
     </div>
