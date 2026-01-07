@@ -1,10 +1,11 @@
 import { useRef, useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save, Trophy, Star } from 'lucide-react';
+import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save, Trophy, Star, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBenchmarkData } from '@/hooks/useBenchmarkData';
 import { useBenchmarkConfig } from '@/hooks/useBenchmarkConfig';
 import { useSavedReports } from '@/hooks/useSavedReports';
@@ -801,10 +802,17 @@ export default function Report() {
                       {fields.map((field, fieldIndex) => (
                         <tr key={field.id} className={`border-b ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
                           <td className={`p-4 font-medium sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${fieldIndex % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
-                            <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
                               <span className="text-foreground">{field.label}</span>
                               {field.description && (
-                                <span className="text-xs text-muted-foreground">{field.description}</span>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help flex-shrink-0" />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right" className="max-w-[300px] text-sm">
+                                    {field.description}
+                                  </TooltipContent>
+                                </Tooltip>
                               )}
                             </div>
                           </td>

@@ -41,11 +41,11 @@ export interface FieldDefinition {
 }
 
 export const fields: FieldDefinition[] = [
-  { id: "cumplimiento_ans", label: "Cumplimiento ANS", type: "percentage", hideNote: true },
+  { id: "cumplimiento_ans", label: "Cumplimiento ANS", type: "percentage", hideNote: true, description: "Este indicador nos muestra el % de pedidos que fueron entregados a tiempo de acuerdo con la promesa de días de entrega de la transportadora" },
   { id: "devoluciones", label: "% Devoluciones", type: "percentage" },
-  { id: "siniestros", label: "% Siniestros", type: "percentage", hideNote: true },
-  { id: "regiones_superior", label: "Regiones con desempeño superior al promedio", type: "textarea" },
-  { id: "regiones_inferior", label: "Regiones con desempeño menor al promedio", type: "textarea" },
+  { id: "siniestros", label: "% Siniestros", type: "percentage", hideNote: true, description: "% de paquetes que pasaron a indemnización" },
+  { id: "regiones_superior", label: "Regiones con desempeño superior al promedio", type: "textarea", description: "Regiones donde la transportadora presentó un desempeño superior al promedio en cuanto a calidad, servicio y tiempos de entrega" },
+  { id: "regiones_inferior", label: "Regiones con desempeño menor al promedio", type: "textarea", description: "Regiones donde la transportadora presentó un desempeño inferior al promedio en cuanto a calidad, servicio y tiempos de entrega" },
   { 
     id: "costo_envio_nacional", 
     label: "Costo de un envío nacional", 
