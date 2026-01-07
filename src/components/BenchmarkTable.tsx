@@ -1,14 +1,12 @@
-import { fields, carriersByCountry, FieldDefinition } from '@/lib/data';
+import { fields, carriersByCountry, FieldDefinition, BenchmarkData, CellValue, normalizeCellValue } from '@/lib/data';
 import { EditableCell } from './EditableCell';
-import { BenchmarkData } from '@/lib/data';
-
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
 
 interface BenchmarkTableProps {
   country: string;
   data: BenchmarkData;
-  onCellChange: (carrier: string, fieldId: string, value: string | number | boolean) => void;
+  onCellChange: (carrier: string, fieldId: string, value: CellValue) => void;
 }
 
 export function BenchmarkTable({ country, data, onCellChange }: BenchmarkTableProps) {
@@ -26,7 +24,7 @@ export function BenchmarkTable({ country, data, onCellChange }: BenchmarkTablePr
               {carriers.map((carrier) => (
                 <th 
                   key={carrier} 
-                  className="min-w-[200px] max-w-[250px] p-3 text-center text-sm font-semibold text-secondary-foreground border-b border-r border-border"
+                  className="min-w-[250px] max-w-[300px] p-3 text-center text-sm font-semibold text-secondary-foreground border-b border-r border-border"
                 >
                   {carrier}
                 </th>
@@ -38,12 +36,14 @@ export function BenchmarkTable({ country, data, onCellChange }: BenchmarkTablePr
               <>
                 {field.id === 'cumplimiento_ans' && (
                   <SectionHeader 
+                    key="section-indicadores"
                     title="INDICADORES DE SERVICIO" 
                     colSpan={carriers.length + 1} 
                   />
                 )}
                 {field.id === 'beneficios' && (
                   <SectionHeader 
+                    key="section-beneficios"
                     title="BENEFICIOS Y DIFERENCIALES" 
                     colSpan={carriers.length + 1} 
                   />
@@ -89,7 +89,7 @@ interface FieldRowProps {
   carriers: string[];
   data: BenchmarkData;
   country: string;
-  onCellChange: (carrier: string, fieldId: string, value: string | number | boolean) => void;
+  onCellChange: (carrier: string, fieldId: string, value: CellValue) => void;
   isEven: boolean;
 }
 
@@ -114,11 +114,11 @@ function FieldRow({ field, carriers, data, country, onCellChange, isEven }: Fiel
       {carriers.map((carrier) => (
         <td 
           key={carrier} 
-          className="min-w-[200px] max-w-[250px] p-2 border-b border-r border-border"
+          className="min-w-[250px] max-w-[300px] p-1 border-b border-r border-border align-top"
         >
           <EditableCell
             field={field}
-            value={data[carrier]?.[field.id] ?? ''}
+            cellValue={normalizeCellValue(data[carrier]?.[field.id])}
             onChange={(value) => onCellChange(carrier, field.id, value)}
             country={country}
           />

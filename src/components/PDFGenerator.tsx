@@ -1,10 +1,16 @@
-import { BenchmarkData, fields, carriersByCountry, monthNames, currencyByCountry } from '@/lib/data';
+import { BenchmarkData, fields, carriersByCountry, monthNames, currencyByCountry, normalizeCellValue } from '@/lib/data';
 
 interface PDFGeneratorProps {
   country: string;
   month: number;
   year: number;
   data: BenchmarkData;
+}
+
+// Helper to get display value from cell
+function getCellDisplayValue(cellData: any): string | number | boolean {
+  const normalized = normalizeCellValue(cellData);
+  return normalized.value;
 }
 
 export async function generatePDF({ country, month, year, data }: PDFGeneratorProps) {
@@ -123,6 +129,21 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
           border-left: 4px solid #0891b2;
         }
         
+        .data-item.color-green {
+          border-left-color: #16a34a;
+          background: #f0fdf4;
+        }
+        
+        .data-item.color-yellow {
+          border-left-color: #ca8a04;
+          background: #fefce8;
+        }
+        
+        .data-item.color-red {
+          border-left-color: #dc2626;
+          background: #fef2f2;
+        }
+        
         .data-label {
           font-size: 11px;
           color: #64748b;
@@ -136,6 +157,13 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
           font-size: 14px;
           color: #1e293b;
           font-weight: 500;
+        }
+        
+        .data-note {
+          font-size: 11px;
+          color: #64748b;
+          margin-top: 4px;
+          font-style: italic;
         }
         
         .data-value.boolean-yes {
@@ -293,7 +321,7 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
           <div class="chart-title">% Devoluciones por Transportadora</div>
           <div class="bar-chart">
             ${carriers.map(carrier => {
-              const val = parseFloat(String(data[carrier]?.devoluciones || 0));
+              const val = parseFloat(String(getCellDisplayValue(data[carrier]?.devoluciones) || 0));
               const width = Math.min(val * 10, 100);
               const colorClass = val <= 2 ? 'good' : val <= 5 ? 'warning' : 'bad';
               return `
@@ -313,7 +341,7 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
           <div class="chart-title">% Siniestros por Transportadora</div>
           <div class="bar-chart">
             ${carriers.map(carrier => {
-              const val = parseFloat(String(data[carrier]?.siniestros || 0));
+              const val = parseFloat(String(getCellDisplayValue(data[carrier]?.siniestros) || 0));
               const width = Math.min(val * 20, 100);
               const colorClass = val <= 1 ? 'good' : val <= 3 ? 'warning' : 'bad';
               return `
@@ -333,7 +361,7 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
           <div class="chart-title">Cumplimiento ANS por Transportadora</div>
           <div class="bar-chart">
             ${carriers.map(carrier => {
-              const val = parseFloat(String(data[carrier]?.cumplimiento_ans || 0));
+              const val = parseFloat(String(getCellDisplayValue(data[carrier]?.cumplimiento_ans) || 0));
               const colorClass = val >= 95 ? 'good' : val >= 85 ? 'warning' : 'bad';
               return `
                 <div class="bar-item">
@@ -367,11 +395,11 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
             ${carriers.map(carrier => `
               <tr>
                 <td><strong>${carrier}</strong></td>
-                <td>${currency} ${Number(data[carrier]?.costo_envio_nacional || 0).toLocaleString()}</td>
-                <td>${currency} ${Number(data[carrier]?.costo_promedio_con_recaudo || 0).toLocaleString()}</td>
-                <td>${currency} ${Number(data[carrier]?.costo_promedio_sin_recaudo || 0).toLocaleString()}</td>
-                <td>${data[carrier]?.comision_recaudo || 0}%</td>
-                <td>${data[carrier]?.costo_manejo || 0}%</td>
+                <td>${currency} ${Number(getCellDisplayValue(data[carrier]?.costo_envio_nacional) || 0).toLocaleString()}</td>
+                <td>${currency} ${Number(getCellDisplayValue(data[carrier]?.costo_promedio_con_recaudo) || 0).toLocaleString()}</td>
+                <td>${currency} ${Number(getCellDisplayValue(data[carrier]?.costo_promedio_sin_recaudo) || 0).toLocaleString()}</td>
+                <td>${getCellDisplayValue(data[carrier]?.comision_recaudo) || 0}%</td>
+                <td>${getCellDisplayValue(data[carrier]?.costo_manejo) || 0}%</td>
               </tr>
             `).join('')}
           </tbody>
@@ -390,15 +418,19 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
             </tr>
           </thead>
           <tbody>
-            ${carriers.map(carrier => `
+            ${carriers.map(carrier => {
+              const redireccion = getCellDisplayValue(data[carrier]?.redireccion_gratis);
+              const reclame = getCellDisplayValue(data[carrier]?.reclame_oficina);
+              const sms = getCellDisplayValue(data[carrier]?.sms_gratuitos);
+              return `
               <tr>
                 <td><strong>${carrier}</strong></td>
-                <td class="${data[carrier]?.redireccion_gratis ? 'boolean-yes' : 'boolean-no'}">${data[carrier]?.redireccion_gratis ? '✓ Sí' : '✗ No'}</td>
-                <td class="${data[carrier]?.reclame_oficina ? 'boolean-yes' : 'boolean-no'}">${data[carrier]?.reclame_oficina ? '✓ Sí' : '✗ No'}</td>
-                <td>${data[carrier]?.intentos_entrega || '-'}</td>
-                <td class="${data[carrier]?.sms_gratuitos ? 'boolean-yes' : 'boolean-no'}">${data[carrier]?.sms_gratuitos ? '✓ Sí' : '✗ No'}</td>
+                <td class="${redireccion ? 'boolean-yes' : 'boolean-no'}">${redireccion ? '✓ Sí' : '✗ No'}</td>
+                <td class="${reclame ? 'boolean-yes' : 'boolean-no'}">${reclame ? '✓ Sí' : '✗ No'}</td>
+                <td>${getCellDisplayValue(data[carrier]?.intentos_entrega) || '-'}</td>
+                <td class="${sms ? 'boolean-yes' : 'boolean-no'}">${sms ? '✓ Sí' : '✗ No'}</td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
       </div>
@@ -410,31 +442,36 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
           
           <div class="data-grid">
             ${fields.map(field => {
-              let value = data[carrier]?.[field.id];
+              const cellData = normalizeCellValue(data[carrier]?.[field.id]);
+              let displayValue = cellData.value;
               let valueClass = 'data-value';
+              let colorClass = cellData.color && cellData.color !== 'none' ? `color-${cellData.color}` : '';
               
               if (field.type === 'boolean') {
-                valueClass += value ? ' boolean-yes' : ' boolean-no';
-                value = value ? '✓ Sí' : '✗ No';
+                valueClass += displayValue ? ' boolean-yes' : ' boolean-no';
+                displayValue = displayValue ? '✓ Sí' : '✗ No';
               } else if (field.type === 'percentage') {
-                const numVal = parseFloat(String(value || 0));
+                const numVal = parseFloat(String(displayValue || 0));
                 valueClass += ' percentage';
                 if (field.id === 'devoluciones' || field.id === 'siniestros') {
                   valueClass += numVal <= 2 ? ' good' : numVal <= 5 ? ' warning' : ' bad';
                 } else if (field.id === 'cumplimiento_ans') {
                   valueClass += numVal >= 95 ? ' good' : numVal >= 85 ? ' warning' : ' bad';
                 }
-                value = `${value || 0}%`;
+                displayValue = `${displayValue || 0}%`;
               } else if (field.type === 'currency') {
-                value = `${currency} ${Number(value || 0).toLocaleString()}`;
+                displayValue = `${currency} ${Number(displayValue || 0).toLocaleString()}`;
               } else {
-                value = value || '-';
+                displayValue = displayValue || '-';
               }
               
+              const noteHtml = cellData.note ? `<div class="data-note">${cellData.note}</div>` : '';
+              
               return `
-                <div class="data-item">
+                <div class="data-item ${colorClass}">
                   <div class="data-label">${field.label}</div>
-                  <div class="${valueClass}">${value}</div>
+                  <div class="${valueClass}">${displayValue}</div>
+                  ${noteHtml}
                 </div>
               `;
             }).join('')}
