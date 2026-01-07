@@ -29,7 +29,7 @@ const Index = () => {
         onGeneratePDF={handleGeneratePDF}
       />
       
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-auto">
         <BenchmarkTable
           country={country}
           data={data}
