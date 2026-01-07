@@ -1,15 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BenchmarkHeader } from '@/components/BenchmarkHeader';
 import { BenchmarkTable } from '@/components/BenchmarkTable';
 import { useBenchmarkData } from '@/hooks/useBenchmarkData';
 import { generatePDF } from '@/components/PDFGenerator';
 import { CellValue } from '@/lib/data';
+import { seedSampleData } from '@/lib/sampleData';
 
 const Index = () => {
   const currentDate = new Date();
   const [country, setCountry] = useState('Colombia');
-  const [month, setMonth] = useState(currentDate.getMonth());
-  const [year, setYear] = useState(currentDate.getFullYear());
+  const [month, setMonth] = useState(9); // October (0-indexed)
+  const [year, setYear] = useState(2025);
+  
+  // Seed sample data on first load
+  useEffect(() => {
+    seedSampleData();
+  }, []);
 
   const { data, updateCell, isSaving } = useBenchmarkData(country, year, month);
 
