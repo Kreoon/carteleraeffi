@@ -740,7 +740,7 @@ export default function Report() {
           <TabsContent value="detailed" className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] px-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Información Completa por Transportadora</h2>
-              <p className="text-muted-foreground">Todos los campos y datos recopilados</p>
+              
             </div>
 
             <Card className="overflow-hidden mx-auto">
