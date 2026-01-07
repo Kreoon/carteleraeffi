@@ -11,7 +11,8 @@ import {
   Code,
   Quote,
   Minus,
-  Link
+  Link,
+  Image
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -93,6 +94,16 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
       return { newText, newCursorPos: start + linkTemplate.length };
     };
 
+  const insertImage = () => 
+    (text: string, start: number, end: number) => {
+      const selectedText = text.substring(start, end) || 'descripción';
+      const before = text.substring(0, start);
+      const after = text.substring(end);
+      const imageTemplate = `![${selectedText}](url-de-imagen)`;
+      const newText = `${before}${imageTemplate}${after}`;
+      return { newText, newCursorPos: start + imageTemplate.length };
+    };
+
   const buttons: ToolbarButton[] = [
     { icon: <Bold className="h-3.5 w-3.5" />, label: "Negrita", action: wrapSelection("**") },
     { icon: <Italic className="h-3.5 w-3.5" />, label: "Cursiva", action: wrapSelection("*") },
@@ -105,6 +116,7 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
     { icon: <Code className="h-3.5 w-3.5" />, label: "Código", action: wrapSelection("`") },
     { icon: <Minus className="h-3.5 w-3.5" />, label: "Línea horizontal", action: insertAtLineStart("\n---\n") },
     { icon: <Link className="h-3.5 w-3.5" />, label: "Enlace", action: insertLink() },
+    { icon: <Image className="h-3.5 w-3.5" />, label: "Imagen", action: insertImage() },
     { icon: <Table className="h-3.5 w-3.5" />, label: "Tabla", action: insertTable() },
   ];
 
