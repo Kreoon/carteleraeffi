@@ -53,7 +53,7 @@ export const fields: FieldDefinition[] = [
     description: "Tarifa con bonificación del 20% en fletes, valor declarado mínimo y recaudo de $120.000",
     subFields: ["Valor Con Recaudo", "Valor Sin Recaudo"]
   },
-  { id: "beneficios", label: "Beneficios", type: "textarea" },
+  { id: "beneficios", label: "Beneficios", type: "textarea", hideNote: true },
   { 
     id: "seguro_gratis", 
     label: "Seguro gratis", 
@@ -69,7 +69,7 @@ export const fields: FieldDefinition[] = [
     subFields: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
   },
   { id: "comision_recaudo", label: "% Comisión de recaudo", type: "textarea" },
-  { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "textarea" },
+  { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "textarea", hideNote: true },
   { id: "politica_peso", label: "Política de peso (peso mínimo a cobrar)", type: "text" },
   { 
     id: "costo_promedio_sin_recaudo", 
@@ -85,7 +85,7 @@ export const fields: FieldDefinition[] = [
   { id: "politica_devoluciones", label: "Política para el cobro de devoluciones", type: "textarea" },
   { id: "politica_pqrs", label: "Política para PQRS", type: "textarea" },
   { id: "sms_gratuitos", label: "Ofrece SMS gratuitos", type: "boolean" },
-  { id: "particularidades_recaudo", label: "Particularidades del recaudo", type: "textarea" },
+  { id: "particularidades_recaudo", label: "Particularidades del recaudo", type: "textarea", hideNote: true },
   { id: "cubrimiento", label: "Cubrimiento", type: "textarea" }
 ];
 
