@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck } from 'lucide-react';
+import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBenchmarkData } from '@/hooks/useBenchmarkData';
 import { useBenchmarkConfig } from '@/hooks/useBenchmarkConfig';
-import { carriersByCountry, fields, monthNames, currencyByCountry, normalizeCellValue } from '@/lib/data';
+import { carriersByCountry, fields, monthNames, currencyByCountry, normalizeCellValue, FieldDefinition } from '@/lib/data';
+import { ProgressBar, ComparisonBar } from '@/components/ui/progress-bar';
+import { MarkdownContent } from '@/components/MarkdownContent';
 import efficommerceLogo from "@/assets/efficommerce-logo.png";
 
 export default function Report() {
@@ -34,38 +36,52 @@ export default function Report() {
     return getCellValue(carrier, fieldId).value;
   };
 
+  const getColorVariant = (fieldId: string, value: number): 'success' | 'warning' | 'danger' => {
+    if (fieldId === 'cumplimiento_ans') {
+      return value >= 95 ? 'success' : value >= 85 ? 'warning' : 'danger';
+    }
+    if (fieldId === 'devoluciones') {
+      return value <= 2 ? 'success' : value <= 5 ? 'warning' : 'danger';
+    }
+    if (fieldId === 'siniestros') {
+      return value <= 1 ? 'success' : value <= 3 ? 'warning' : 'danger';
+    }
+    return 'success';
+  };
+
   const downloadHTML = () => {
     if (!reportRef.current) return;
     
     const styles = `
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
-        body { background: #f8fafc; color: #1e293b; line-height: 1.5; }
-        .report-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .report-header { background: linear-gradient(135deg, #0891b2, #0e7490); color: white; padding: 40px; border-radius: 16px; margin-bottom: 24px; text-align: center; }
-        .report-header h1 { font-size: 32px; margin-bottom: 8px; }
-        .report-header p { opacity: 0.9; font-size: 18px; }
-        .banner-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 24px; }
-        .section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #0891b2; }
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-        .carrier-card { background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; }
-        .carrier-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .carrier-logo { width: 48px; height: 48px; object-fit: contain; border-radius: 8px; background: white; padding: 4px; }
-        .carrier-name { font-size: 18px; font-weight: 600; }
-        .metric { margin-bottom: 12px; }
-        .metric-label { font-size: 12px; color: #64748b; text-transform: uppercase; }
-        .metric-value { font-size: 16px; font-weight: 500; }
-        .metric-value.good { color: #16a34a; }
-        .metric-value.warning { color: #ca8a04; }
-        .metric-value.bad { color: #dc2626; }
+        body { background: #f8fafc; color: #1e293b; line-height: 1.6; }
+        .report { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        img { max-width: 100%; height: auto; }
+        .header { background: linear-gradient(135deg, #0891b2, #0e7490); color: white; padding: 40px; border-radius: 16px; margin-bottom: 24px; text-align: center; }
+        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .grid { display: grid; gap: 16px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; font-weight: 600; }
         .badge { display: inline-flex; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
-        .badge.success { background: #dcfce7; color: #166534; }
-        .badge.danger { background: #fee2e2; color: #991b1b; }
-        .comparison-table { width: 100%; border-collapse: collapse; }
-        .comparison-table th { background: #0891b2; color: white; padding: 12px; text-align: left; }
-        .comparison-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
-        .comparison-table tr:hover { background: #f1f5f9; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-yellow { background: #fef3c7; color: #92400e; }
+        .badge-red { background: #fee2e2; color: #991b1b; }
+        .progress { height: 8px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; }
+        .progress-bar { height: 100%; border-radius: 9999px; }
+        .text-green { color: #16a34a; }
+        .text-yellow { color: #ca8a04; }
+        .text-red { color: #dc2626; }
+        .text-muted { color: #64748b; }
+        .font-bold { font-weight: 700; }
+        .text-center { text-align: center; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-4 { margin-top: 16px; }
       </style>
     `;
     
@@ -78,7 +94,7 @@ export default function Report() {
   ${styles}
 </head>
 <body>
-  <div class="report-container">
+  <div class="report">
     ${reportRef.current.innerHTML}
   </div>
 </body>
@@ -104,6 +120,98 @@ export default function Report() {
       </div>
     );
   }
+
+  // Prepare chart data
+  const ansData = carriers.map(c => ({
+    label: c,
+    value: parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)),
+    color: getColorVariant('cumplimiento_ans', parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0))),
+    logo: getCarrierLogo(c)
+  }));
+
+  const devData = carriers.map(c => ({
+    label: c,
+    value: parseFloat(String(getDisplayValue(c, 'devoluciones') || 0)),
+    color: getColorVariant('devoluciones', parseFloat(String(getDisplayValue(c, 'devoluciones') || 0))),
+    logo: getCarrierLogo(c)
+  }));
+
+  const sinData = carriers.map(c => ({
+    label: c,
+    value: parseFloat(String(getDisplayValue(c, 'siniestros') || 0)),
+    color: getColorVariant('siniestros', parseFloat(String(getDisplayValue(c, 'siniestros') || 0))),
+    logo: getCarrierLogo(c)
+  }));
+
+  const renderFieldValue = (carrier: string, field: FieldDefinition) => {
+    const cellValue = getCellValue(carrier, field.id);
+    const value = cellValue.value;
+    const note = cellValue.note;
+    const color = cellValue.color;
+
+    const colorClasses = {
+      green: 'bg-green-50 border-green-200',
+      yellow: 'bg-yellow-50 border-yellow-200',
+      red: 'bg-red-50 border-red-200',
+      none: ''
+    };
+
+    let displayContent: React.ReactNode = '-';
+
+    if (field.type === 'boolean') {
+      displayContent = value ? (
+        <Badge variant="default" className="gap-1 bg-green-500">
+          <CheckCircle className="h-3 w-3" /> Sí
+        </Badge>
+      ) : (
+        <Badge variant="destructive" className="gap-1">
+          <XCircle className="h-3 w-3" /> No
+        </Badge>
+      );
+    } else if (field.type === 'percentage') {
+      const numVal = parseFloat(String(value || 0));
+      const variant = getColorVariant(field.id, numVal);
+      displayContent = (
+        <div className="space-y-1">
+          <span className={`font-bold ${variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+            {numVal}%
+          </span>
+          <ProgressBar value={numVal} variant={variant} size="sm" showLabel={false} />
+        </div>
+      );
+    } else if (field.type === 'currency' || field.type === 'multi-currency') {
+      if (typeof value === 'object' && value !== null) {
+        displayContent = (
+          <div className="space-y-1 text-sm">
+            {Object.entries(value as Record<string, any>).map(([key, val]) => (
+              <div key={key} className="flex justify-between">
+                <span className="text-muted-foreground">{key}:</span>
+                <span className="font-medium">{currency} {Number(val || 0).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        );
+      } else {
+        displayContent = value ? `${currency} ${Number(value).toLocaleString()}` : '-';
+      }
+    } else if (field.type === 'textarea' || field.type === 'text') {
+      displayContent = <MarkdownContent content={String(value || '')} />;
+    } else {
+      displayContent = String(value || '-');
+    }
+
+    return (
+      <div className={`p-3 rounded-lg border ${colorClasses[color || 'none']}`}>
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{field.label}</div>
+        <div className="text-sm">{displayContent}</div>
+        {note && (
+          <div className="mt-2 text-xs text-muted-foreground italic border-t pt-2">
+            <MarkdownContent content={note} />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background print:bg-white">
@@ -156,213 +264,300 @@ export default function Report() {
           </CardHeader>
         </Card>
 
-        {/* KPI Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Truck className="h-4 w-4" />
-                <span className="text-sm">Transportadoras</span>
-              </div>
-              <p className="text-2xl font-bold">{carriers.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <TrendingUp className="h-4 w-4" />
-                <span className="text-sm">Mejor ANS</span>
-              </div>
-              <p className="text-2xl font-bold text-green-600">
-                {Math.max(...carriers.map(c => parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)))).toFixed(1)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <TrendingDown className="h-4 w-4" />
-                <span className="text-sm">Menor Devolución</span>
-              </div>
-              <p className="text-2xl font-bold text-green-600">
-                {Math.min(...carriers.map(c => parseFloat(String(getDisplayValue(c, 'devoluciones') || 100)))).toFixed(1)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <DollarSign className="h-4 w-4" />
-                <span className="text-sm">Moneda</span>
-              </div>
-              <p className="text-2xl font-bold">{currency}</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Tabs for Dashboard vs Detailed Table */}
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto print:hidden">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="detailed" className="gap-2">
+              <Table2 className="h-4 w-4" />
+              Tabla Detallada
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Carrier Cards */}
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Truck className="h-5 w-5 text-primary" />
-          Detalle por Transportadora
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          {carriers.map(carrier => {
-            const logoUrl = getCarrierLogo(carrier);
-            const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
-            const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
-            const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
-            
-            return (
-              <Card key={carrier} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3 bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    {logoUrl ? (
-                      <img 
-                        src={logoUrl} 
-                        alt={carrier}
-                        className="w-12 h-12 object-contain rounded-lg bg-white p-1 border"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Truck className="h-6 w-6 text-primary" />
-                      </div>
-                    )}
-                    <CardTitle className="text-lg">{carrier}</CardTitle>
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* KPI Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Truck className="h-4 w-4" />
+                    <span className="text-sm">Transportadoras</span>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-4">
-                  {/* Key Metrics */}
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">ANS</p>
-                      <p className={`text-lg font-bold ${ans >= 95 ? 'text-green-600' : ans >= 85 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {ans}%
-                      </p>
-                    </div>
-                    <div className="p-2 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Dev.</p>
-                      <p className={`text-lg font-bold ${dev <= 2 ? 'text-green-600' : dev <= 5 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {dev}%
-                      </p>
-                    </div>
-                    <div className="p-2 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Sin.</p>
-                      <p className={`text-lg font-bold ${sin <= 1 ? 'text-green-600' : sin <= 3 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {sin}%
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Services */}
-                  <div className="flex flex-wrap gap-2">
-                    {getDisplayValue(carrier, 'redireccion_gratis') && (
-                      <Badge variant="secondary" className="gap-1">
-                        <CheckCircle className="h-3 w-3" /> Redirección gratis
-                      </Badge>
-                    )}
-                    {getDisplayValue(carrier, 'reclame_oficina') && (
-                      <Badge variant="secondary" className="gap-1">
-                        <CheckCircle className="h-3 w-3" /> Reclame oficina
-                      </Badge>
-                    )}
-                    {getDisplayValue(carrier, 'sms_gratuitos') && (
-                      <Badge variant="secondary" className="gap-1">
-                        <CheckCircle className="h-3 w-3" /> SMS gratis
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Costs */}
-                  <div className="pt-2 border-t space-y-1">
-                    <p className="text-sm text-muted-foreground">Comisión recaudo</p>
-                    <p className="font-medium">{getDisplayValue(carrier, 'comision_recaudo') || '-'}</p>
-                  </div>
+                  <p className="text-2xl font-bold">{carriers.length}</p>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm">Mejor ANS</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">
+                    {Math.max(...carriers.map(c => parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)))).toFixed(1)}%
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <TrendingDown className="h-4 w-4" />
+                    <span className="text-sm">Menor Devolución</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">
+                    {Math.min(...carriers.map(c => parseFloat(String(getDisplayValue(c, 'devoluciones') || 100)))).toFixed(1)}%
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <DollarSign className="h-4 w-4" />
+                    <span className="text-sm">Moneda</span>
+                  </div>
+                  <p className="text-2xl font-bold">{currency}</p>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Comparison Table */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>📊 Tabla Comparativa</CardTitle>
-            <CardDescription>Métricas principales de todas las transportadoras</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-3 font-semibold">Transportadora</th>
-                  <th className="text-center p-3 font-semibold">ANS</th>
-                  <th className="text-center p-3 font-semibold">Devoluciones</th>
-                  <th className="text-center p-3 font-semibold">Siniestros</th>
-                  <th className="text-center p-3 font-semibold">Redirección</th>
-                  <th className="text-center p-3 font-semibold">SMS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {carriers.map(carrier => {
-                  const logoUrl = getCarrierLogo(carrier);
-                  const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
-                  const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
-                  const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
-                  const redir = getDisplayValue(carrier, 'redireccion_gratis');
-                  const sms = getDisplayValue(carrier, 'sms_gratuitos');
-                  
-                  return (
-                    <tr key={carrier} className="border-b hover:bg-muted/30">
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          {logoUrl ? (
-                            <img src={logoUrl} alt={carrier} className="w-8 h-8 object-contain rounded bg-white p-0.5 border" />
-                          ) : (
-                            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
-                              <Truck className="h-4 w-4 text-primary" />
-                            </div>
-                          )}
-                          <span className="font-medium">{carrier}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge variant={ans >= 95 ? 'default' : ans >= 85 ? 'secondary' : 'destructive'}>
-                          {ans}%
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge variant={dev <= 2 ? 'default' : dev <= 5 ? 'secondary' : 'destructive'}>
-                          {dev}%
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge variant={sin <= 1 ? 'default' : sin <= 3 ? 'secondary' : 'destructive'}>
-                          {sin}%
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        {redir ? (
-                          <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+            {/* Comparison Charts */}
+            <div className="grid md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-green-500" />
+                    Cumplimiento ANS
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ComparisonBar items={ansData} max={100} valueFormatter={(v) => `${v}%`} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingDown className="h-4 w-4 text-yellow-500" />
+                    % Devoluciones
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ComparisonBar items={devData} max={15} valueFormatter={(v) => `${v}%`} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    % Siniestros
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ComparisonBar items={sinData} max={10} valueFormatter={(v) => `${v}%`} />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Carrier Cards */}
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" />
+              Resumen por Transportadora
+            </h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {carriers.map(carrier => {
+                const logoUrl = getCarrierLogo(carrier);
+                const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
+                const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
+                const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
+                
+                return (
+                  <Card key={carrier} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3 bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt={carrier} className="w-12 h-12 object-contain rounded-lg bg-white p-1 border" />
                         ) : (
-                          <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Truck className="h-6 w-6 text-primary" />
+                          </div>
                         )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {sms ? (
-                          <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                        <CardTitle className="text-lg">{carrier}</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 space-y-4">
+                      <div className="space-y-3">
+                        <ProgressBar 
+                          value={ans} 
+                          variant={getColorVariant('cumplimiento_ans', ans)} 
+                          label="ANS" 
+                        />
+                        <ProgressBar 
+                          value={dev} 
+                          max={15}
+                          variant={getColorVariant('devoluciones', dev)} 
+                          label="Devoluciones" 
+                        />
+                        <ProgressBar 
+                          value={sin} 
+                          max={10}
+                          variant={getColorVariant('siniestros', sin)} 
+                          label="Siniestros" 
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2 border-t">
+                        {getDisplayValue(carrier, 'redireccion_gratis') && (
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <CheckCircle className="h-3 w-3" /> Redirección
+                          </Badge>
                         )}
-                      </td>
+                        {getDisplayValue(carrier, 'reclame_oficina') && (
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <CheckCircle className="h-3 w-3" /> Reclame oficina
+                          </Badge>
+                        )}
+                        {getDisplayValue(carrier, 'sms_gratuitos') && (
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <CheckCircle className="h-3 w-3" /> SMS gratis
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Comparison Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📊 Tabla Comparativa Rápida</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 font-semibold">Transportadora</th>
+                      <th className="text-center p-3 font-semibold">ANS</th>
+                      <th className="text-center p-3 font-semibold">Devoluciones</th>
+                      <th className="text-center p-3 font-semibold">Siniestros</th>
+                      <th className="text-center p-3 font-semibold">Redirección</th>
+                      <th className="text-center p-3 font-semibold">Reclame</th>
+                      <th className="text-center p-3 font-semibold">SMS</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+                  </thead>
+                  <tbody>
+                    {carriers.map(carrier => {
+                      const logoUrl = getCarrierLogo(carrier);
+                      const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
+                      const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
+                      const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
+                      
+                      return (
+                        <tr key={carrier} className="border-b hover:bg-muted/30">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              {logoUrl ? (
+                                <img src={logoUrl} alt={carrier} className="w-8 h-8 object-contain rounded bg-white p-0.5 border" />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-4 w-4 text-primary" />
+                                </div>
+                              )}
+                              <span className="font-medium">{carrier}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge variant={ans >= 95 ? 'default' : ans >= 85 ? 'secondary' : 'destructive'}>
+                              {ans}%
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge variant={dev <= 2 ? 'default' : dev <= 5 ? 'secondary' : 'destructive'}>
+                              {dev}%
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge variant={sin <= 1 ? 'default' : sin <= 3 ? 'secondary' : 'destructive'}>
+                              {sin}%
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            {getDisplayValue(carrier, 'redireccion_gratis') ? (
+                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            {getDisplayValue(carrier, 'reclame_oficina') ? (
+                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            {getDisplayValue(carrier, 'sms_gratuitos') ? (
+                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Detailed Table Tab */}
+          <TabsContent value="detailed" className="space-y-8">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold">Información Completa por Transportadora</h2>
+              <p className="text-muted-foreground">Todos los campos y datos recopilados</p>
+            </div>
+
+            {carriers.map(carrier => {
+              const logoUrl = getCarrierLogo(carrier);
+              
+              return (
+                <Card key={carrier} className="overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+                    <div className="flex items-center gap-4">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={carrier} className="w-16 h-16 object-contain rounded-xl bg-white p-2 border shadow" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-primary/20 flex items-center justify-center">
+                          <Truck className="h-8 w-8 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <CardTitle className="text-2xl">{carrier}</CardTitle>
+                        <CardDescription>Información completa del benchmark</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {fields.map(field => (
+                        <div key={field.id}>
+                          {renderFieldValue(carrier, field)}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </TabsContent>
+        </Tabs>
 
         {/* Footer */}
-        <div className="text-center text-muted-foreground text-sm py-6 border-t">
+        <div className="text-center text-muted-foreground text-sm py-6 border-t mt-8">
           <p>Reporte generado por <strong>Efficommerce</strong></p>
           <p>{monthName} {year} - {country}</p>
         </div>
