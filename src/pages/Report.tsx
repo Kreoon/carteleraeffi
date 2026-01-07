@@ -523,8 +523,8 @@ export default function Report() {
 
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                <div className="overflow-auto max-h-[70vh] relative">
+                  <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b bg-muted/50">
                         <th className="text-left p-4 font-semibold min-w-[200px] sticky left-0 bg-muted/50 z-10">Campo</th>
