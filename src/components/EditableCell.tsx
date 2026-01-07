@@ -203,6 +203,26 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
                 p: ({ children }) => (
                   <p className="my-1">{children}</p>
                 ),
+                img: ({ src, alt }) => (
+                  <img 
+                    src={src} 
+                    alt={alt || ''} 
+                    className="max-w-full h-auto rounded my-2"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ),
+                a: ({ href, children }) => (
+                  <a 
+                    href={href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary underline hover:text-primary/80"
+                  >
+                    {children}
+                  </a>
+                ),
               }}
             >
               {String(localValue || '')}
