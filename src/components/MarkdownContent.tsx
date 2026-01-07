@@ -72,7 +72,7 @@ export function MarkdownContent({ content, className = '' }: MarkdownContentProp
   return <div className={`space-y-2 ${className}`}>{parts}</div>;
 }
 
-// Basic markdown parsing for bold, italic, and line breaks
+// Basic markdown parsing for bold, italic, URLs, and line breaks
 function parseBasicMarkdown(text: string): React.ReactNode {
   if (!text) return null;
 
@@ -80,30 +80,7 @@ function parseBasicMarkdown(text: string): React.ReactNode {
   const lines = text.split('\n');
   
   return lines.map((line, lineIndex) => {
-    // Parse bold (**text**)
-    const boldRegex = /\*\*([^*]+)\*\*/g;
-    let parsedLine: React.ReactNode[] = [];
-    let lastIdx = 0;
-    let match;
-    let partKey = 0;
-
-    while ((match = boldRegex.exec(line)) !== null) {
-      if (match.index > lastIdx) {
-        parsedLine.push(line.slice(lastIdx, match.index));
-      }
-      parsedLine.push(
-        <strong key={`bold-${partKey++}`}>{match[1]}</strong>
-      );
-      lastIdx = match.index + match[0].length;
-    }
-    
-    if (lastIdx < line.length) {
-      parsedLine.push(line.slice(lastIdx));
-    }
-
-    if (parsedLine.length === 0) {
-      parsedLine.push(line);
-    }
+    const parsedLine = parseLineContent(line);
 
     return (
       <React.Fragment key={`line-${lineIndex}`}>
@@ -112,4 +89,57 @@ function parseBasicMarkdown(text: string): React.ReactNode {
       </React.Fragment>
     );
   });
+}
+
+// Parse a single line for bold text and URLs
+function parseLineContent(line: string): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  
+  // Combined regex for bold and URLs
+  const combinedRegex = /(\*\*[^*]+\*\*)|(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
+  
+  let lastIdx = 0;
+  let match;
+  let partKey = 0;
+
+  while ((match = combinedRegex.exec(line)) !== null) {
+    // Add text before the match
+    if (match.index > lastIdx) {
+      result.push(line.slice(lastIdx, match.index));
+    }
+
+    if (match[1]) {
+      // Bold text
+      const boldText = match[1].slice(2, -2); // Remove ** from both ends
+      result.push(
+        <strong key={`bold-${partKey++}`}>{boldText}</strong>
+      );
+    } else if (match[2]) {
+      // URL
+      result.push(
+        <a
+          key={`url-${partKey++}`}
+          href={match[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline break-all"
+        >
+          {match[2]}
+        </a>
+      );
+    }
+
+    lastIdx = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIdx < line.length) {
+    result.push(line.slice(lastIdx));
+  }
+
+  if (result.length === 0) {
+    result.push(line);
+  }
+
+  return result;
 }
