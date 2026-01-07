@@ -29,6 +29,8 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
   const [localValue, setLocalValue] = useState<any>(cellValue.value);
   const [localNote, setLocalNote] = useState(cellValue.note || '');
   const [localColor, setLocalColor] = useState<CellValue['color']>(cellValue.color || 'none');
+  const [isEditing, setIsEditing] = useState(true);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const currency = currencyByCountry[country] || "COP";
 
   useEffect(() => {
@@ -132,8 +134,6 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
   }
 
   if (field.type === 'textarea') {
-    const [isEditing, setIsEditing] = useState(true);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const hasContent = String(localValue || '').trim().length > 0;
 
     return (
