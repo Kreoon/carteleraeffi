@@ -514,54 +514,89 @@ export default function Report() {
               📈 Indicadores Clave de Desempeño
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <TrendingUp className="h-4 w-4" />
-                    <span className="text-sm">Promedio ANS</span>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)), 0) / carriers.length).toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Entre todas las transportadoras</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <TrendingDown className="h-4 w-4" />
-                    <span className="text-sm">Promedio Devoluciones</span>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'devoluciones') || 0)), 0) / carriers.length).toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Tasa promedio del período</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm">Promedio Siniestros</span>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'siniestros') || 0)), 0) / carriers.length).toFixed(2)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Tasa promedio del período</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm">Con Servicios Extra</span>
-                  </div>
-                  <p className="text-2xl font-bold">
-                    {carriers.filter(c => getDisplayValue(c, 'redireccion_gratis') || getDisplayValue(c, 'reclame_oficina') || getDisplayValue(c, 'sms_gratuitos')).length}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">De {carriers.length} transportadoras</p>
-                </CardContent>
-              </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-help hover:shadow-md transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                        <TrendingUp className="h-4 w-4" />
+                        <span className="text-sm">Promedio ANS</span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)), 0) / carriers.length).toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Entre todas las transportadoras</p>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[300px] text-sm">
+                  <p className="font-semibold mb-1">Promedio de Cumplimiento ANS</p>
+                  <p>Porcentaje promedio de pedidos entregados a tiempo según la promesa de entrega de cada transportadora. Meta: ≥95%</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-help hover:shadow-md transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                        <TrendingDown className="h-4 w-4" />
+                        <span className="text-sm">Promedio Devoluciones</span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'devoluciones') || 0)), 0) / carriers.length).toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Tasa promedio del período</p>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[300px] text-sm">
+                  <p className="font-semibold mb-1">Promedio de Devoluciones</p>
+                  <p>Porcentaje promedio de paquetes devueltos. Un valor más bajo indica mejor desempeño. Ideal: ≤2%</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-help hover:shadow-md transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="text-sm">Promedio Siniestros</span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'siniestros') || 0)), 0) / carriers.length).toFixed(2)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Tasa promedio del período</p>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[300px] text-sm">
+                  <p className="font-semibold mb-1">Promedio de Siniestros</p>
+                  <p>Porcentaje promedio de paquetes que pasaron a indemnización. Un valor más bajo es mejor. Ideal: ≤1%</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-help hover:shadow-md transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="text-sm">Con Servicios Extra</span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {carriers.filter(c => getDisplayValue(c, 'redireccion_gratis') || getDisplayValue(c, 'reclame_oficina') || getDisplayValue(c, 'sms_gratuitos')).length}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">De {carriers.length} transportadoras</p>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[300px] text-sm">
+                  <p className="font-semibold mb-1">Transportadoras con Servicios Extra</p>
+                  <p>Cantidad de transportadoras que ofrecen al menos uno de: redirección gratis, reclame en oficina o SMS gratuitos.</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
 
             {/* Comparison Charts */}
