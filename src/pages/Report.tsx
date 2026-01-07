@@ -515,13 +515,13 @@ export default function Report() {
           </TabsContent>
 
           {/* Detailed Table Tab */}
-          <TabsContent value="detailed" className="space-y-8 -mx-6 px-0">
-            <div className="text-center mb-6 px-6">
+          <TabsContent value="detailed" className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] px-4">
+            <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Información Completa por Transportadora</h2>
               <p className="text-muted-foreground">Todos los campos y datos recopilados</p>
             </div>
 
-            <Card className="overflow-hidden rounded-none border-x-0">
+            <Card className="overflow-hidden mx-auto">
               <CardContent className="p-0">
                 <div className="overflow-auto max-h-[70vh] relative">
                   <table className="w-full text-sm border-collapse">
