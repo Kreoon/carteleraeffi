@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { FieldDefinition, currencyByCountry, CellValue } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Eye, Edit } from 'lucide-react';
 
 interface EditableCellProps {
   field: FieldDefinition;
@@ -128,17 +131,68 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
   }
 
   if (field.type === 'textarea') {
+    const [isEditing, setIsEditing] = useState(true);
+    const hasContent = String(localValue || '').trim().length > 0;
+
     return (
       <div className={cn("p-2 rounded", getColorClass())}>
-        <div className="flex items-start gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2">
           <ColorSelector />
+          <div className="flex gap-1 ml-auto">
+            <Button
+              variant={isEditing ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => setIsEditing(true)}
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+            <Button
+              variant={!isEditing ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2"
+              onClick={() => setIsEditing(false)}
+              disabled={!hasContent}
+            >
+              <Eye className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
-        <Textarea
-          value={String(localValue || '')}
-          onChange={(e) => handleValueChange(e.target.value)}
-          className="min-h-[80px] text-sm resize-none border-border bg-background/80"
-          placeholder="Escribir..."
-        />
+        {isEditing ? (
+          <Textarea
+            value={String(localValue || '')}
+            onChange={(e) => handleValueChange(e.target.value)}
+            className="min-h-[100px] text-sm resize-y border-border bg-background/80 font-mono"
+            placeholder="Soporta Markdown: **negrita**, *cursiva*, - listas, | tablas |"
+          />
+        ) : (
+          <div className="prose prose-sm max-w-none dark:prose-invert bg-background/80 border border-border rounded-md p-3 min-h-[100px] overflow-auto">
+            <ReactMarkdown
+              components={{
+                table: ({ children }) => (
+                  <table className="border-collapse border border-border text-xs w-full">{children}</table>
+                ),
+                th: ({ children }) => (
+                  <th className="border border-border bg-muted px-2 py-1 text-left font-semibold">{children}</th>
+                ),
+                td: ({ children }) => (
+                  <td className="border border-border px-2 py-1">{children}</td>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-4 my-1">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-4 my-1">{children}</ol>
+                ),
+                p: ({ children }) => (
+                  <p className="my-1">{children}</p>
+                ),
+              }}
+            >
+              {String(localValue || '')}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
     );
   }
