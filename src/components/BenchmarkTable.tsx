@@ -1,7 +1,7 @@
 import { fields, carriersByCountry, FieldDefinition } from '@/lib/data';
 import { EditableCell } from './EditableCell';
 import { BenchmarkData } from '@/lib/data';
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
 
@@ -15,56 +15,53 @@ export function BenchmarkTable({ country, data, onCellChange }: BenchmarkTablePr
   const carriers = carriersByCountry[country] || [];
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <ScrollArea className="h-full">
-        <div className="min-w-max">
-          <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-secondary">
-                <th className="sticky left-0 z-20 bg-secondary min-w-[280px] max-w-[320px] p-3 text-left text-sm font-semibold text-secondary-foreground border-b border-r border-border">
-                  Campo
+    <div className="flex-1 overflow-auto">
+      <div className="min-w-max">
+        <table className="w-full border-collapse">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-secondary">
+              <th className="sticky left-0 z-20 bg-secondary min-w-[280px] max-w-[320px] p-3 text-left text-sm font-semibold text-secondary-foreground border-b border-r border-border">
+                Campo
+              </th>
+              {carriers.map((carrier) => (
+                <th 
+                  key={carrier} 
+                  className="min-w-[200px] max-w-[250px] p-3 text-center text-sm font-semibold text-secondary-foreground border-b border-r border-border"
+                >
+                  {carrier}
                 </th>
-                {carriers.map((carrier) => (
-                  <th 
-                    key={carrier} 
-                    className="min-w-[200px] max-w-[250px] p-3 text-center text-sm font-semibold text-secondary-foreground border-b border-r border-border"
-                  >
-                    {carrier}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {fields.map((field, index) => (
-                <>
-                  {field.id === 'cumplimiento_ans' && (
-                    <SectionHeader 
-                      title="INDICADORES DE SERVICIO" 
-                      colSpan={carriers.length + 1} 
-                    />
-                  )}
-                  {field.id === 'beneficios' && (
-                    <SectionHeader 
-                      title="BENEFICIOS Y DIFERENCIALES" 
-                      colSpan={carriers.length + 1} 
-                    />
-                  )}
-                  <FieldRow
-                    key={field.id}
-                    field={field}
-                    carriers={carriers}
-                    data={data}
-                    country={country}
-                    onCellChange={onCellChange}
-                    isEven={index % 2 === 0}
-                  />
-                </>
               ))}
-            </tbody>
-          </table>
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+            </tr>
+          </thead>
+          <tbody>
+            {fields.map((field, index) => (
+              <>
+                {field.id === 'cumplimiento_ans' && (
+                  <SectionHeader 
+                    title="INDICADORES DE SERVICIO" 
+                    colSpan={carriers.length + 1} 
+                  />
+                )}
+                {field.id === 'beneficios' && (
+                  <SectionHeader 
+                    title="BENEFICIOS Y DIFERENCIALES" 
+                    colSpan={carriers.length + 1} 
+                  />
+                )}
+                <FieldRow
+                  key={field.id}
+                  field={field}
+                  carriers={carriers}
+                  data={data}
+                  country={country}
+                  onCellChange={onCellChange}
+                  isEven={index % 2 === 0}
+                />
+              </>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
