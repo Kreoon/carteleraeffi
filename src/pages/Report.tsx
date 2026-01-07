@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save } from 'lucide-react';
+import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save, Trophy, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -296,51 +296,277 @@ export default function Report() {
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
+            {/* Executive Summary - Recommendations */}
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  🎯 Resumen Ejecutivo - Recomendaciones
+                </CardTitle>
+                <CardDescription>
+                  Análisis basado en los indicadores clave de desempeño del período
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  // Calculate rankings
+                  const carrierStats = carriers.map(c => ({
+                    name: c,
+                    ans: parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)),
+                    dev: parseFloat(String(getDisplayValue(c, 'devoluciones') || 100)),
+                    sin: parseFloat(String(getDisplayValue(c, 'siniestros') || 100)),
+                    logo: getCarrierLogo(c),
+                    hasRedirect: !!getDisplayValue(c, 'redireccion_gratis'),
+                    hasPickup: !!getDisplayValue(c, 'reclame_oficina'),
+                    hasSms: !!getDisplayValue(c, 'sms_gratuitos'),
+                  }));
+
+                  // Best ANS
+                  const bestAns = [...carrierStats].sort((a, b) => b.ans - a.ans)[0];
+                  // Lowest returns
+                  const lowestDev = [...carrierStats].sort((a, b) => a.dev - b.dev)[0];
+                  // Lowest claims
+                  const lowestSin = [...carrierStats].sort((a, b) => a.sin - b.sin)[0];
+                  // Best overall (weighted score)
+                  const withScore = carrierStats.map(c => ({
+                    ...c,
+                    score: (c.ans * 0.4) + ((100 - c.dev * 5) * 0.3) + ((100 - c.sin * 10) * 0.3)
+                  }));
+                  const bestOverall = [...withScore].sort((a, b) => b.score - a.score)[0];
+                  // Most services
+                  const mostServices = [...carrierStats].sort((a, b) => 
+                    (Number(b.hasRedirect) + Number(b.hasPickup) + Number(b.hasSms)) - 
+                    (Number(a.hasRedirect) + Number(a.hasPickup) + Number(a.hasSms))
+                  )[0];
+
+                  return (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="bg-background rounded-lg p-4 border shadow-sm">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Trophy className="h-4 w-4 text-yellow-500" />
+                          Mejor Desempeño General
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {bestOverall.logo ? (
+                            <img src={bestOverall.logo} alt={bestOverall.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                              <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-bold text-lg">{bestOverall.name}</p>
+                            <p className="text-xs text-muted-foreground">Puntuación: {bestOverall.score.toFixed(0)}/100</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-background rounded-lg p-4 border shadow-sm">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Shield className="h-4 w-4 text-green-500" />
+                          Mejor Cumplimiento ANS
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {bestAns.logo ? (
+                            <img src={bestAns.logo} alt={bestAns.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                              <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-bold text-lg">{bestAns.name}</p>
+                            <p className="text-xs text-green-600 font-medium">{bestAns.ans}% de cumplimiento</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-background rounded-lg p-4 border shadow-sm">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <TrendingDown className="h-4 w-4 text-blue-500" />
+                          Menor Tasa de Devoluciones
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {lowestDev.logo ? (
+                            <img src={lowestDev.logo} alt={lowestDev.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                              <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-bold text-lg">{lowestDev.name}</p>
+                            <p className="text-xs text-blue-600 font-medium">{lowestDev.dev}% devoluciones</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-background rounded-lg p-4 border shadow-sm">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <AlertTriangle className="h-4 w-4 text-purple-500" />
+                          Menor Tasa de Siniestros
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {lowestSin.logo ? (
+                            <img src={lowestSin.logo} alt={lowestSin.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                              <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-bold text-lg">{lowestSin.name}</p>
+                            <p className="text-xs text-purple-600 font-medium">{lowestSin.sin}% siniestros</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-background rounded-lg p-4 border shadow-sm">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Star className="h-4 w-4 text-orange-500" />
+                          Más Servicios Incluidos
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {mostServices.logo ? (
+                            <img src={mostServices.logo} alt={mostServices.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                              <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-bold text-lg">{mostServices.name}</p>
+                            <p className="text-xs text-orange-600 font-medium">
+                              {Number(mostServices.hasRedirect) + Number(mostServices.hasPickup) + Number(mostServices.hasSms)} servicios extra
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-background rounded-lg p-4 border shadow-sm">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Truck className="h-4 w-4 text-primary" />
+                          Total Transportadoras
+                        </div>
+                        <p className="font-bold text-3xl">{carriers.length}</p>
+                        <p className="text-xs text-muted-foreground">Evaluadas en {monthName} {year}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Ranking General */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  🏆 Ranking General de Transportadoras
+                </CardTitle>
+                <CardDescription>
+                  Ordenado por puntuación ponderada: ANS (40%), Devoluciones (30%), Siniestros (30%)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const ranked = carriers.map(c => {
+                    const ans = parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0));
+                    const dev = parseFloat(String(getDisplayValue(c, 'devoluciones') || 100));
+                    const sin = parseFloat(String(getDisplayValue(c, 'siniestros') || 100));
+                    const score = (ans * 0.4) + ((100 - dev * 5) * 0.3) + ((100 - sin * 10) * 0.3);
+                    return { name: c, ans, dev, sin, score, logo: getCarrierLogo(c) };
+                  }).sort((a, b) => b.score - a.score);
+
+                  return (
+                    <div className="space-y-3">
+                      {ranked.map((carrier, index) => (
+                        <div key={carrier.name} className={`flex items-center gap-4 p-3 rounded-lg border ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200' : index === 1 ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200' : index === 2 ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200' : 'bg-background'}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500 text-white' : index === 1 ? 'bg-slate-400 text-white' : index === 2 ? 'bg-orange-400 text-white' : 'bg-muted text-muted-foreground'}`}>
+                            {index + 1}
+                          </div>
+                          {carrier.logo ? (
+                            <img src={carrier.logo} alt={carrier.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                              <Truck className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <p className="font-semibold">{carrier.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              ANS: {carrier.ans}% | Dev: {carrier.dev}% | Sin: {carrier.sin}%
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-lg">{carrier.score.toFixed(0)}</p>
+                            <p className="text-xs text-muted-foreground">puntos</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
             {/* KPI Summary */}
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              📈 Indicadores Clave de Desempeño
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <Truck className="h-4 w-4" />
-                    <span className="text-sm">Transportadoras</span>
-                  </div>
-                  <p className="text-2xl font-bold">{carriers.length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <TrendingUp className="h-4 w-4" />
-                    <span className="text-sm">Mejor ANS</span>
+                    <span className="text-sm">Promedio ANS</span>
                   </div>
-                  <p className="text-2xl font-bold text-green-600">
-                    {Math.max(...carriers.map(c => parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)))).toFixed(1)}%
+                  <p className="text-2xl font-bold">
+                    {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)), 0) / carriers.length).toFixed(1)}%
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">Entre todas las transportadoras</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <TrendingDown className="h-4 w-4" />
-                    <span className="text-sm">Menor Devolución</span>
+                    <span className="text-sm">Promedio Devoluciones</span>
                   </div>
-                  <p className="text-2xl font-bold text-green-600">
-                    {Math.min(...carriers.map(c => parseFloat(String(getDisplayValue(c, 'devoluciones') || 100)))).toFixed(1)}%
+                  <p className="text-2xl font-bold">
+                    {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'devoluciones') || 0)), 0) / carriers.length).toFixed(1)}%
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">Tasa promedio del período</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                    <DollarSign className="h-4 w-4" />
-                    <span className="text-sm">Moneda</span>
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm">Promedio Siniestros</span>
                   </div>
-                  <p className="text-2xl font-bold">{currency}</p>
+                  <p className="text-2xl font-bold">
+                    {(carriers.reduce((sum, c) => sum + parseFloat(String(getDisplayValue(c, 'siniestros') || 0)), 0) / carriers.length).toFixed(2)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Tasa promedio del período</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="text-sm">Con Servicios Extra</span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {carriers.filter(c => getDisplayValue(c, 'redireccion_gratis') || getDisplayValue(c, 'reclame_oficina') || getDisplayValue(c, 'sms_gratuitos')).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">De {carriers.length} transportadoras</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Comparison Charts */}
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              📊 Comparación Visual
+            </h2>
             <div className="grid md:grid-cols-3 gap-6">
               <Card>
                 <CardHeader className="pb-2">
@@ -348,6 +574,7 @@ export default function Report() {
                     <Shield className="h-4 w-4 text-green-500" />
                     Cumplimiento ANS
                   </CardTitle>
+                  <CardDescription className="text-xs">Meta: ≥95%</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ComparisonBar items={ansData} max={100} valueFormatter={(v) => `${v}%`} />
@@ -359,9 +586,10 @@ export default function Report() {
                     <TrendingDown className="h-4 w-4 text-yellow-500" />
                     % Devoluciones
                   </CardTitle>
+                  <CardDescription className="text-xs">Ideal: ≤2%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={devData} max={15} valueFormatter={(v) => `${v}%`} />
+                  <ComparisonBar items={devData} max={20} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
               <Card>
@@ -370,6 +598,7 @@ export default function Report() {
                     <AlertTriangle className="h-4 w-4 text-red-500" />
                     % Siniestros
                   </CardTitle>
+                  <CardDescription className="text-xs">Ideal: ≤1%</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ComparisonBar items={sinData} max={10} valueFormatter={(v) => `${v}%`} />
@@ -377,80 +606,90 @@ export default function Report() {
               </Card>
             </div>
 
-            {/* Carrier Cards */}
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Truck className="h-5 w-5 text-primary" />
-              Resumen por Transportadora
-            </h2>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {carriers.map(carrier => {
-                const logoUrl = getCarrierLogo(carrier);
-                const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
-                const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
-                const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
-                
-                return (
-                  <Card key={carrier} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3 bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        {logoUrl ? (
-                          <img src={logoUrl} alt={carrier} className="w-12 h-12 object-contain rounded-lg bg-white p-1 border" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Truck className="h-6 w-6 text-primary" />
-                          </div>
-                        )}
-                        <CardTitle className="text-lg">{carrier}</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                      <div className="space-y-3">
-                        <ProgressBar 
-                          value={ans} 
-                          variant={getColorVariant('cumplimiento_ans', ans)} 
-                          label="ANS" 
-                        />
-                        <ProgressBar 
-                          value={dev} 
-                          max={15}
-                          variant={getColorVariant('devoluciones', dev)} 
-                          label="Devoluciones" 
-                        />
-                        <ProgressBar 
-                          value={sin} 
-                          max={10}
-                          variant={getColorVariant('siniestros', sin)} 
-                          label="Siniestros" 
-                        />
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 pt-2 border-t">
-                        {getDisplayValue(carrier, 'redireccion_gratis') && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <CheckCircle className="h-3 w-3" /> Redirección
-                          </Badge>
-                        )}
-                        {getDisplayValue(carrier, 'reclame_oficina') && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <CheckCircle className="h-3 w-3" /> Reclame oficina
-                          </Badge>
-                        )}
-                        {getDisplayValue(carrier, 'sms_gratuitos') && (
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <CheckCircle className="h-3 w-3" /> SMS gratis
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {/* Comparison Table */}
+            {/* Services Matrix */}
             <Card>
               <CardHeader>
-                <CardTitle>📊 Tabla Comparativa Rápida</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  ✅ Matriz de Servicios Adicionales
+                </CardTitle>
+                <CardDescription>
+                  Servicios de valor agregado incluidos por cada transportadora
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 font-semibold">Transportadora</th>
+                      <th className="text-center p-3 font-semibold">Redirección Gratis</th>
+                      <th className="text-center p-3 font-semibold">Reclame en Oficina</th>
+                      <th className="text-center p-3 font-semibold">SMS Gratuitos</th>
+                      <th className="text-center p-3 font-semibold">Total Servicios</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carriers.map(carrier => {
+                      const logoUrl = getCarrierLogo(carrier);
+                      const hasRedirect = !!getDisplayValue(carrier, 'redireccion_gratis');
+                      const hasPickup = !!getDisplayValue(carrier, 'reclame_oficina');
+                      const hasSms = !!getDisplayValue(carrier, 'sms_gratuitos');
+                      const total = Number(hasRedirect) + Number(hasPickup) + Number(hasSms);
+                      
+                      return (
+                        <tr key={carrier} className="border-b hover:bg-muted/30">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              {logoUrl ? (
+                                <img src={logoUrl} alt={carrier} className="w-8 h-8 object-contain rounded bg-white p-0.5 border" />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                                  <Truck className="h-4 w-4 text-primary" />
+                                </div>
+                              )}
+                              <span className="font-medium">{carrier}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            {hasRedirect ? (
+                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            {hasPickup ? (
+                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            {hasSms ? (
+                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge variant={total === 3 ? 'default' : total >= 1 ? 'secondary' : 'destructive'}>
+                              {total}/3
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+
+            {/* Performance Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📋 Tabla Comparativa de Desempeño</CardTitle>
+                <CardDescription>
+                  Resumen de indicadores clave por transportadora
+                </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -460,9 +699,7 @@ export default function Report() {
                       <th className="text-center p-3 font-semibold">ANS</th>
                       <th className="text-center p-3 font-semibold">Devoluciones</th>
                       <th className="text-center p-3 font-semibold">Siniestros</th>
-                      <th className="text-center p-3 font-semibold">Redirección</th>
-                      <th className="text-center p-3 font-semibold">Reclame</th>
-                      <th className="text-center p-3 font-semibold">SMS</th>
+                      <th className="text-center p-3 font-semibold">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -471,6 +708,9 @@ export default function Report() {
                       const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
                       const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
                       const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
+                      
+                      const isGood = ans >= 90 && dev <= 5 && sin <= 1;
+                      const isWarning = ans >= 80 && dev <= 10 && sin <= 3;
                       
                       return (
                         <tr key={carrier} className="border-b hover:bg-muted/30">
@@ -502,25 +742,18 @@ export default function Report() {
                             </Badge>
                           </td>
                           <td className="p-3 text-center">
-                            {getDisplayValue(carrier, 'redireccion_gratis') ? (
-                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            {getDisplayValue(carrier, 'reclame_oficina') ? (
-                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            {getDisplayValue(carrier, 'sms_gratuitos') ? (
-                              <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500 mx-auto" />
-                            )}
+                            <Badge 
+                              variant={isGood ? 'default' : isWarning ? 'secondary' : 'destructive'}
+                              className="gap-1"
+                            >
+                              {isGood ? (
+                                <><CheckCircle className="h-3 w-3" /> Excelente</>
+                              ) : isWarning ? (
+                                <><AlertTriangle className="h-3 w-3" /> Aceptable</>
+                              ) : (
+                                <><XCircle className="h-3 w-3" /> Revisar</>
+                              )}
+                            </Badge>
                           </td>
                         </tr>
                       );
