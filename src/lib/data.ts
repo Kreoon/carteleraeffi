@@ -74,8 +74,9 @@ export const fields: FieldDefinition[] = [
   { 
     id: "costo_promedio_sin_recaudo", 
     label: "Costo promedio flete SIN recaudo", 
-    type: "currency",
-    description: "Bonificación del 20%"
+    type: "multi-currency",
+    description: "Bonificación del 20%",
+    subFields: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
   },
   { id: "redireccion_gratis", label: "¿Permite redireccionar paquetes gratis?", type: "boolean" },
   { id: "reclame_oficina", label: "Reclame oficina", type: "boolean" },
