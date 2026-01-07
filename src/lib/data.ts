@@ -68,7 +68,7 @@ export const fields: FieldDefinition[] = [
     description: "Bonificación del 20%",
     subFields: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
   },
-  { id: "comision_recaudo", label: "% Comisión de recaudo", type: "percentage" },
+  { id: "comision_recaudo", label: "% Comisión de recaudo", type: "textarea" },
   { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "percentage" },
   { id: "politica_peso", label: "Política de peso (peso mínimo a cobrar)", type: "text" },
   { 
