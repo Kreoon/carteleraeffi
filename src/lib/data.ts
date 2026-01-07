@@ -66,7 +66,7 @@ export const fields: FieldDefinition[] = [
     label: "Costo promedio flete con recaudo $120.000", 
     type: "multi-currency",
     description: "Bonificación del 20%",
-    subFields: ["Urbano", "Regional", "Zonal", "Otros", "Especial", "Difícil Acceso", "Veredas"]
+    subFields: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
   },
   { id: "comision_recaudo", label: "% Comisión de recaudo", type: "percentage" },
   { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "percentage" },
