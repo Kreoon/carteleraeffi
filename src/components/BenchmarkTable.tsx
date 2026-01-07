@@ -36,15 +36,29 @@ export function BenchmarkTable({ country, data, onCellChange }: BenchmarkTablePr
             </thead>
             <tbody>
               {fields.map((field, index) => (
-                <FieldRow
-                  key={field.id}
-                  field={field}
-                  carriers={carriers}
-                  data={data}
-                  country={country}
-                  onCellChange={onCellChange}
-                  isEven={index % 2 === 0}
-                />
+                <>
+                  {field.id === 'cumplimiento_ans' && (
+                    <SectionHeader 
+                      title="INDICADORES DE SERVICIO" 
+                      colSpan={carriers.length + 1} 
+                    />
+                  )}
+                  {field.id === 'beneficios' && (
+                    <SectionHeader 
+                      title="BENEFICIOS Y DIFERENCIALES" 
+                      colSpan={carriers.length + 1} 
+                    />
+                  )}
+                  <FieldRow
+                    key={field.id}
+                    field={field}
+                    carriers={carriers}
+                    data={data}
+                    country={country}
+                    onCellChange={onCellChange}
+                    isEven={index % 2 === 0}
+                  />
+                </>
               ))}
             </tbody>
           </table>
@@ -52,6 +66,24 @@ export function BenchmarkTable({ country, data, onCellChange }: BenchmarkTablePr
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
+  );
+}
+
+interface SectionHeaderProps {
+  title: string;
+  colSpan: number;
+}
+
+function SectionHeader({ title, colSpan }: SectionHeaderProps) {
+  return (
+    <tr>
+      <td 
+        colSpan={colSpan} 
+        className="bg-primary/10 p-3 text-sm font-bold text-primary border-b border-border"
+      >
+        {title}
+      </td>
+    </tr>
   );
 }
 
