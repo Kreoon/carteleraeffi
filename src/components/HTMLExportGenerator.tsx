@@ -72,20 +72,47 @@ export async function generateFullHTML({
     return 'success';
   };
 
-  // Calculate statistics
-  const carrierStats = carriers.map(c => ({
-    name: c,
-    ans: parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)),
-    dev: parseFloat(String(getDisplayValue(c, 'devoluciones') || 100)),
-    sin: parseFloat(String(getDisplayValue(c, 'siniestros') || 100)),
-    hasRedirect: !!getDisplayValue(c, 'redireccion_gratis'),
-    hasPickup: !!getDisplayValue(c, 'reclame_oficina'),
-    hasSms: !!getDisplayValue(c, 'sms_gratuitos'),
-  }));
+  // Helper to get color variant considering user-defined colors
+  const getEffectiveColor = (fieldId: string, value: number, userColor?: string): 'success' | 'warning' | 'danger' => {
+    if (userColor && userColor !== 'none') {
+      return userColor === 'green' ? 'success' : userColor === 'yellow' ? 'warning' : 'danger';
+    }
+    return getColorVariant(fieldId, value);
+  };
 
+  // Calculate statistics
+  const carrierStats = carriers.map(c => {
+    const ansCell = getCellValue(c, 'cumplimiento_ans');
+    const devCell = getCellValue(c, 'devoluciones');
+    const sinCell = getCellValue(c, 'siniestros');
+    
+    const ans = parseFloat(String(ansCell.value || 0));
+    const dev = parseFloat(String(devCell.value || 100));
+    const sin = parseFloat(String(sinCell.value || 100));
+    
+    return {
+      name: c,
+      ans,
+      dev,
+      sin,
+      ansColor: getEffectiveColor('cumplimiento_ans', ans, ansCell.color),
+      devColor: getEffectiveColor('devoluciones', dev, devCell.color),
+      sinColor: getEffectiveColor('siniestros', sin, sinCell.color),
+      hasRedirect: !!getDisplayValue(c, 'redireccion_gratis'),
+      hasPickup: !!getDisplayValue(c, 'reclame_oficina'),
+      hasSms: !!getDisplayValue(c, 'sms_gratuitos'),
+      regiones_superior: getDisplayValue(c, 'regiones_superior'),
+      regiones_inferior: getDisplayValue(c, 'regiones_inferior'),
+      costo_envio_nacional: getDisplayValue(c, 'costo_envio_nacional'),
+      costo_promedio_con_recaudo: getDisplayValue(c, 'costo_promedio_con_recaudo'),
+      costo_promedio_sin_recaudo: getDisplayValue(c, 'costo_promedio_sin_recaudo'),
+    };
+  });
+
+  // Score with new weights: Dev 60%, ANS 35%, Sin 5%
   const withScore = carrierStats.map(c => ({
     ...c,
-    score: (c.ans * 0.4) + ((100 - c.dev * 5) * 0.3) + ((100 - c.sin * 10) * 0.3)
+    score: (c.ans * 0.35) + ((100 - c.dev * 5) * 0.60) + ((100 - c.sin * 10) * 0.05)
   }));
 
   const bestOverall = [...withScore].sort((a, b) => b.score - a.score)[0];
@@ -664,7 +691,7 @@ export async function generateFullHTML({
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">🏆 Ranking General de Transportadoras</h3>
-        <p class="card-description">Ordenado por puntuación ponderada: ANS (40%), Devoluciones (30%), Siniestros (30%)</p>
+        <p class="card-description">Ordenado por puntuación ponderada: Devoluciones (60%), ANS (35%), Siniestros (5%)</p>
       </div>
       ${ranked.map((carrier, index) => `
         <div class="ranking-item ${index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : ''}">
@@ -711,18 +738,18 @@ export async function generateFullHTML({
     <h2 class="section-title">📊 Comparación Visual</h2>
     <div class="charts-grid">
       ${getComparisonChartHTML(
-        '✅ Cumplimiento ANS (Meta: ≥95%)',
-        carrierStats.map(c => ({ name: c.name, value: c.ans, variant: getColorVariant('cumplimiento_ans', c.ans) })),
+        '✅ Cumplimiento a los Tiempos de Entrega (ANS) - Meta: ≥95%',
+        carrierStats.map(c => ({ name: c.name, value: c.ans, variant: c.ansColor })),
         v => `${v}%`
       )}
       ${getComparisonChartHTML(
-        '📦 % Devoluciones (Ideal: ≤2%)',
-        carrierStats.map(c => ({ name: c.name, value: c.dev, variant: getColorVariant('devoluciones', c.dev) })),
+        '📦 Devoluciones - Ideal: ≤2%',
+        carrierStats.map(c => ({ name: c.name, value: c.dev, variant: c.devColor })),
         v => `${v}%`
       )}
       ${getComparisonChartHTML(
-        '🛡️ % Siniestros (Ideal: ≤1%)',
-        carrierStats.map(c => ({ name: c.name, value: c.sin, variant: getColorVariant('siniestros', c.sin) })),
+        '🛡️ Siniestros - Ideal: ≤1%',
+        carrierStats.map(c => ({ name: c.name, value: c.sin, variant: c.sinColor })),
         v => `${v}%`
       )}
     </div>
@@ -791,11 +818,20 @@ export async function generateFullHTML({
           </thead>
           <tbody>
             ${carriers.map(carrier => {
-              const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
-              const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
-              const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
+              const stat = carrierStats.find(c => c.name === carrier);
+              const ans = stat?.ans || 0;
+              const dev = stat?.dev || 0;
+              const sin = stat?.sin || 0;
+              const ansColor = stat?.ansColor || 'danger';
+              const devColor = stat?.devColor || 'danger';
+              const sinColor = stat?.sinColor || 'danger';
+              
               const isGood = ans >= 90 && dev <= 5 && sin <= 1;
               const isWarning = ans >= 80 && dev <= 10 && sin <= 3;
+              
+              const colorToBadge = (c: string) => 
+                c === 'success' ? 'badge-green' : c === 'warning' ? 'badge-yellow' : 'badge-red';
+              
               return `
                 <tr>
                   <td>
@@ -805,19 +841,109 @@ export async function generateFullHTML({
                     </div>
                   </td>
                   <td style="text-align: center;">
-                    <span class="badge ${ans >= 95 ? 'badge-green' : ans >= 85 ? 'badge-yellow' : 'badge-red'}">${ans}%</span>
+                    <span class="badge ${colorToBadge(ansColor)}">${ans}%</span>
                   </td>
                   <td style="text-align: center;">
-                    <span class="badge ${dev <= 2 ? 'badge-green' : dev <= 5 ? 'badge-yellow' : 'badge-red'}">${dev}%</span>
+                    <span class="badge ${colorToBadge(devColor)}">${dev}%</span>
                   </td>
                   <td style="text-align: center;">
-                    <span class="badge ${sin <= 1 ? 'badge-green' : sin <= 3 ? 'badge-yellow' : 'badge-red'}">${sin}%</span>
+                    <span class="badge ${colorToBadge(sinColor)}">${sin}%</span>
                   </td>
                   <td style="text-align: center;">
                     <span class="badge ${isGood ? 'badge-green' : isWarning ? 'badge-yellow' : 'badge-red'}">
                       ${isGood ? '✓ Excelente' : isWarning ? '⚠ Aceptable' : '✗ Revisar'}
                     </span>
+                    <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
+                      ${isGood ? 'Cumple todos los criterios' : isWarning ? 'Puede mejorar' : 'Requiere análisis'}
+                    </div>
                   </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Regions Analysis -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">🗺️ Análisis por Regiones</h3>
+        <p class="card-description">Desempeño regional por transportadora</p>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Transportadora</th>
+              <th style="min-width: 250px;">Regiones con Desempeño Superior</th>
+              <th style="min-width: 250px;">Regiones con Desempeño Inferior</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${carrierStats.map((stat, index) => `
+              <tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    ${getCarrierLogoHTML(stat.name, 32)}
+                    <span style="font-weight: 500;">${stat.name}</span>
+                  </div>
+                </td>
+                <td style="font-size: 12px; color: #166534; background: ${stat.regiones_superior ? '#f0fdf4' : 'transparent'};">
+                  ${stat.regiones_superior || '<span style="color: #64748b;">Sin información</span>'}
+                </td>
+                <td style="font-size: 12px; color: #991b1b; background: ${stat.regiones_inferior ? '#fef2f2' : 'transparent'};">
+                  ${stat.regiones_inferior || '<span style="color: #64748b;">Sin información</span>'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Shipping Costs -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">💰 Costos de Fletes</h3>
+        <p class="card-description">Comparativa de costos de envío por transportadora</p>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Transportadora</th>
+              <th style="text-align: center;">Costo Envío Nacional</th>
+              <th style="text-align: center;">Costo Promedio Con Recaudo</th>
+              <th style="text-align: center;">Costo Promedio Sin Recaudo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${carrierStats.map((stat, index) => {
+              const formatCost = (value: any) => {
+                if (!value) return '<span style="color: #64748b;">-</span>';
+                if (typeof value === 'object') {
+                  return Object.entries(value).map(([key, val]) => 
+                    `<div style="display: flex; justify-content: space-between; gap: 8px; font-size: 11px; margin-bottom: 2px;">
+                      <span style="color: #64748b;">${key}:</span>
+                      <span style="font-weight: 500;">${currency} ${Number(val || 0).toLocaleString()}</span>
+                    </div>`
+                  ).join('');
+                }
+                return `${currency} ${Number(value).toLocaleString()}`;
+              };
+              
+              return `
+                <tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      ${getCarrierLogoHTML(stat.name, 32)}
+                      <span style="font-weight: 500;">${stat.name}</span>
+                    </div>
+                  </td>
+                  <td style="text-align: center; font-size: 12px;">${formatCost(stat.costo_envio_nacional)}</td>
+                  <td style="text-align: left; padding-left: 20px;">${formatCost(stat.costo_promedio_con_recaudo)}</td>
+                  <td style="text-align: left; padding-left: 20px;">${formatCost(stat.costo_promedio_sin_recaudo)}</td>
                 </tr>
               `;
             }).join('')}

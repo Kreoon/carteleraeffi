@@ -110,27 +110,40 @@ export default function Report() {
     );
   }
 
-  // Prepare chart data
-  const ansData = carriers.map(c => ({
-    label: c,
-    value: parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)),
-    color: getColorVariant('cumplimiento_ans', parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0))),
-    logo: getCarrierLogo(c)
-  }));
+  // Prepare chart data - use user-defined colors if available
+  const ansData = carriers.map(c => {
+    const cellValue = getCellValue(c, 'cumplimiento_ans');
+    const value = parseFloat(String(cellValue.value || 0));
+    // Priorizar color del usuario si está definido
+    const userColor = cellValue.color;
+    const autoColor = getColorVariant('cumplimiento_ans', value);
+    const color = userColor && userColor !== 'none' ? 
+      (userColor === 'green' ? 'success' : userColor === 'yellow' ? 'warning' : 'danger') : 
+      autoColor;
+    return { label: c, value, color, logo: getCarrierLogo(c) };
+  });
 
-  const devData = carriers.map(c => ({
-    label: c,
-    value: parseFloat(String(getDisplayValue(c, 'devoluciones') || 0)),
-    color: getColorVariant('devoluciones', parseFloat(String(getDisplayValue(c, 'devoluciones') || 0))),
-    logo: getCarrierLogo(c)
-  }));
+  const devData = carriers.map(c => {
+    const cellValue = getCellValue(c, 'devoluciones');
+    const value = parseFloat(String(cellValue.value || 0));
+    const userColor = cellValue.color;
+    const autoColor = getColorVariant('devoluciones', value);
+    const color = userColor && userColor !== 'none' ? 
+      (userColor === 'green' ? 'success' : userColor === 'yellow' ? 'warning' : 'danger') : 
+      autoColor;
+    return { label: c, value, color, logo: getCarrierLogo(c) };
+  });
 
-  const sinData = carriers.map(c => ({
-    label: c,
-    value: parseFloat(String(getDisplayValue(c, 'siniestros') || 0)),
-    color: getColorVariant('siniestros', parseFloat(String(getDisplayValue(c, 'siniestros') || 0))),
-    logo: getCarrierLogo(c)
-  }));
+  const sinData = carriers.map(c => {
+    const cellValue = getCellValue(c, 'siniestros');
+    const value = parseFloat(String(cellValue.value || 0));
+    const userColor = cellValue.color;
+    const autoColor = getColorVariant('siniestros', value);
+    const color = userColor && userColor !== 'none' ? 
+      (userColor === 'green' ? 'success' : userColor === 'yellow' ? 'warning' : 'danger') : 
+      autoColor;
+    return { label: c, value, color, logo: getCarrierLogo(c) };
+  });
 
   const renderFieldValue = (carrier: string, field: FieldDefinition) => {
     const cellValue = getCellValue(carrier, field.id);
@@ -302,10 +315,10 @@ export default function Report() {
                   const lowestDev = [...carrierStats].sort((a, b) => a.dev - b.dev)[0];
                   // Lowest claims
                   const lowestSin = [...carrierStats].sort((a, b) => a.sin - b.sin)[0];
-                  // Best overall (weighted score)
+                  // Best overall (weighted score: Dev 60%, ANS 35%, Sin 5%)
                   const withScore = carrierStats.map(c => ({
                     ...c,
-                    score: (c.ans * 0.4) + ((100 - c.dev * 5) * 0.3) + ((100 - c.sin * 10) * 0.3)
+                    score: (c.ans * 0.35) + ((100 - c.dev * 5) * 0.60) + ((100 - c.sin * 10) * 0.05)
                   }));
                   const bestOverall = [...withScore].sort((a, b) => b.score - a.score)[0];
                   // Most services
@@ -340,7 +353,7 @@ export default function Report() {
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-[320px] text-sm">
                           <p className="font-semibold mb-1">🏆 Mejor Desempeño General</p>
-                          <p>Puntuación ponderada calculada con: ANS (40%), Devoluciones (30%), Siniestros (30%). Esta transportadora lidera en el balance general de indicadores.</p>
+                          <p>Puntuación ponderada calculada con: Devoluciones (60%), ANS (35%), Siniestros (5%). Esta transportadora lidera en el balance general de indicadores.</p>
                         </TooltipContent>
                       </Tooltip>
 
@@ -487,7 +500,7 @@ export default function Report() {
                   🏆 Ranking General de Transportadoras
                 </CardTitle>
                 <CardDescription>
-                  Ordenado por puntuación ponderada: ANS (40%), Devoluciones (30%), Siniestros (30%)
+                  Ordenado por puntuación ponderada: Devoluciones (60%), ANS (35%), Siniestros (5%)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -496,7 +509,8 @@ export default function Report() {
                     const ans = parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0));
                     const dev = parseFloat(String(getDisplayValue(c, 'devoluciones') || 100));
                     const sin = parseFloat(String(getDisplayValue(c, 'siniestros') || 100));
-                    const score = (ans * 0.4) + ((100 - dev * 5) * 0.3) + ((100 - sin * 10) * 0.3);
+                    // Pesos: Dev 60%, ANS 35%, Sin 5%
+                    const score = (ans * 0.35) + ((100 - dev * 5) * 0.60) + ((100 - sin * 10) * 0.05);
                     return { name: c, ans, dev, sin, score, logo: getCarrierLogo(c) };
                   }).sort((a, b) => b.score - a.score);
 
@@ -535,7 +549,7 @@ export default function Report() {
                               <p>• <strong>Devoluciones:</strong> {carrier.dev}% {carrier.dev <= 2 ? '✅ Excelente' : carrier.dev <= 5 ? '⚠️ Aceptable' : '❌ Alto'}</p>
                               <p>• <strong>Siniestros:</strong> {carrier.sin}% {carrier.sin <= 1 ? '✅ Excelente' : carrier.sin <= 3 ? '⚠️ Aceptable' : '❌ Alto'}</p>
                             </div>
-                            <p className="mt-2 text-muted-foreground">Puntuación: ANS×40% + (100-Dev×5)×30% + (100-Sin×10)×30%</p>
+                            <p className="mt-2 text-muted-foreground">Puntuación: ANS×35% + (100-Dev×5)×60% + (100-Sin×10)×5%</p>
                           </TooltipContent>
                         </Tooltip>
                       ))}
@@ -644,9 +658,9 @@ export default function Report() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Shield className="h-4 w-4 text-green-500" />
-                    Cumplimiento ANS
+                    Cumplimiento a los Tiempos de Entrega (ANS)
                   </CardTitle>
-                  <CardDescription className="text-xs">Meta: ≥95%</CardDescription>
+                  <CardDescription className="text-xs">Porcentaje de entregas a tiempo. Meta: ≥95%</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ComparisonBar items={ansData} max={100} valueFormatter={(v) => `${v}%`} />
@@ -656,9 +670,9 @@ export default function Report() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <TrendingDown className="h-4 w-4 text-yellow-500" />
-                    % Devoluciones
+                    Devoluciones
                   </CardTitle>
-                  <CardDescription className="text-xs">Ideal: ≤2%</CardDescription>
+                  <CardDescription className="text-xs">Porcentaje de paquetes devueltos. Ideal: ≤2%</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ComparisonBar items={devData} max={100} valueFormatter={(v) => `${v}%`} />
@@ -668,9 +682,9 @@ export default function Report() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
-                    % Siniestros
+                    Siniestros
                   </CardTitle>
-                  <CardDescription className="text-xs">Ideal: ≤1%</CardDescription>
+                  <CardDescription className="text-xs">Porcentaje de paquetes indemnizados. Ideal: ≤1%</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ComparisonBar items={sinData} max={100} valueFormatter={(v) => `${v}%`} />
@@ -768,18 +782,63 @@ export default function Report() {
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="text-left p-3 font-semibold">Transportadora</th>
-                      <th className="text-center p-3 font-semibold">ANS</th>
-                      <th className="text-center p-3 font-semibold">Devoluciones</th>
-                      <th className="text-center p-3 font-semibold">Siniestros</th>
-                      <th className="text-center p-3 font-semibold">Estado</th>
+                      <th className="text-center p-3 font-semibold">
+                        <Tooltip>
+                          <TooltipTrigger className="cursor-help flex items-center justify-center gap-1">
+                            ANS <Info className="h-3 w-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>Cumplimiento a los tiempos de entrega. Meta: ≥95%</TooltipContent>
+                        </Tooltip>
+                      </th>
+                      <th className="text-center p-3 font-semibold">
+                        <Tooltip>
+                          <TooltipTrigger className="cursor-help flex items-center justify-center gap-1">
+                            Devoluciones <Info className="h-3 w-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>Porcentaje de paquetes devueltos. Ideal: ≤2%</TooltipContent>
+                        </Tooltip>
+                      </th>
+                      <th className="text-center p-3 font-semibold">
+                        <Tooltip>
+                          <TooltipTrigger className="cursor-help flex items-center justify-center gap-1">
+                            Siniestros <Info className="h-3 w-3" />
+                          </TooltipTrigger>
+                          <TooltipContent>Porcentaje de paquetes indemnizados. Ideal: ≤1%</TooltipContent>
+                        </Tooltip>
+                      </th>
+                      <th className="text-center p-3 font-semibold">
+                        <Tooltip>
+                          <TooltipTrigger className="cursor-help flex items-center justify-center gap-1">
+                            Estado <Info className="h-3 w-3" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[300px]">
+                            <p className="font-semibold mb-1">Estado General de la Transportadora</p>
+                            <p><strong>Excelente:</strong> ANS ≥90%, Devoluciones ≤5%, Siniestros ≤1%</p>
+                            <p><strong>Aceptable:</strong> ANS ≥80%, Devoluciones ≤10%, Siniestros ≤3%</p>
+                            <p><strong>Revisar:</strong> No cumple los criterios mínimos, requiere análisis</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {carriers.map(carrier => {
                       const logoUrl = getCarrierLogo(carrier);
-                      const ans = parseFloat(String(getDisplayValue(carrier, 'cumplimiento_ans') || 0));
-                      const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
-                      const sin = parseFloat(String(getDisplayValue(carrier, 'siniestros') || 0));
+                      const ansCell = getCellValue(carrier, 'cumplimiento_ans');
+                      const devCell = getCellValue(carrier, 'devoluciones');
+                      const sinCell = getCellValue(carrier, 'siniestros');
+                      
+                      const ans = parseFloat(String(ansCell.value || 0));
+                      const dev = parseFloat(String(devCell.value || 0));
+                      const sin = parseFloat(String(sinCell.value || 0));
+                      
+                      // Use user-defined colors if available, otherwise auto-calculate
+                      const ansColor = ansCell.color && ansCell.color !== 'none' ? ansCell.color : (ans >= 95 ? 'green' : ans >= 85 ? 'yellow' : 'red');
+                      const devColor = devCell.color && devCell.color !== 'none' ? devCell.color : (dev <= 2 ? 'green' : dev <= 5 ? 'yellow' : 'red');
+                      const sinColor = sinCell.color && sinCell.color !== 'none' ? sinCell.color : (sin <= 1 ? 'green' : sin <= 3 ? 'yellow' : 'red');
+                      
+                      const colorToBadgeVariant = (color: string) => 
+                        color === 'green' ? 'default' : color === 'yellow' ? 'secondary' : 'destructive';
                       
                       const isGood = ans >= 90 && dev <= 5 && sin <= 1;
                       const isWarning = ans >= 80 && dev <= 10 && sin <= 3;
@@ -799,33 +858,46 @@ export default function Report() {
                             </div>
                           </td>
                           <td className="p-3 text-center">
-                            <Badge variant={ans >= 95 ? 'default' : ans >= 85 ? 'secondary' : 'destructive'}>
+                            <Badge variant={colorToBadgeVariant(ansColor)} className={ansColor === 'green' ? 'bg-green-500' : ''}>
                               {ans}%
                             </Badge>
                           </td>
                           <td className="p-3 text-center">
-                            <Badge variant={dev <= 2 ? 'default' : dev <= 5 ? 'secondary' : 'destructive'}>
+                            <Badge variant={colorToBadgeVariant(devColor)} className={devColor === 'green' ? 'bg-green-500' : ''}>
                               {dev}%
                             </Badge>
                           </td>
                           <td className="p-3 text-center">
-                            <Badge variant={sin <= 1 ? 'default' : sin <= 3 ? 'secondary' : 'destructive'}>
+                            <Badge variant={colorToBadgeVariant(sinColor)} className={sinColor === 'green' ? 'bg-green-500' : ''}>
                               {sin}%
                             </Badge>
                           </td>
                           <td className="p-3 text-center">
-                            <Badge 
-                              variant={isGood ? 'default' : isWarning ? 'secondary' : 'destructive'}
-                              className="gap-1"
-                            >
-                              {isGood ? (
-                                <><CheckCircle className="h-3 w-3" /> Excelente</>
-                              ) : isWarning ? (
-                                <><AlertTriangle className="h-3 w-3" /> Aceptable</>
-                              ) : (
-                                <><XCircle className="h-3 w-3" /> Revisar</>
-                              )}
-                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant={isGood ? 'default' : isWarning ? 'secondary' : 'destructive'}
+                                  className={`gap-1 cursor-help ${isGood ? 'bg-green-500' : ''}`}
+                                >
+                                  {isGood ? (
+                                    <><CheckCircle className="h-3 w-3" /> Excelente</>
+                                  ) : isWarning ? (
+                                    <><AlertTriangle className="h-3 w-3" /> Aceptable</>
+                                  ) : (
+                                    <><XCircle className="h-3 w-3" /> Revisar</>
+                                  )}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[320px]">
+                                {isGood ? (
+                                  <p>✅ <strong>Excelente:</strong> Cumple todos los criterios óptimos. ANS ≥90%, Devoluciones ≤5%, Siniestros ≤1%</p>
+                                ) : isWarning ? (
+                                  <p>⚠️ <strong>Aceptable:</strong> Cumple criterios mínimos pero puede mejorar. ANS ≥80%, Devoluciones ≤10%, Siniestros ≤3%</p>
+                                ) : (
+                                  <p>❌ <strong>Revisar:</strong> No cumple los criterios mínimos. Se recomienda analizar el desempeño y considerar alternativas o negociar mejoras.</p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
                           </td>
                         </tr>
                       );
