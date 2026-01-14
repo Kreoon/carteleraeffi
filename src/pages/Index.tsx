@@ -15,7 +15,15 @@ const Index = () => {
     seedSampleData();
   }, []);
 
-  const { data, updateCell, isSaving } = useBenchmarkData(country, year, month);
+  const { 
+    data, 
+    updateCell, 
+    isSaving, 
+    copyFromPeriod, 
+    getPreviousMonth, 
+    hasPreviousMonthData,
+    getSavedPeriods 
+  } = useBenchmarkData(country, year, month);
 
   const handleCellChange = (carrier: string, fieldId: string, value: CellValue) => {
     updateCell(carrier, fieldId, value);
@@ -31,6 +39,10 @@ const Index = () => {
         year={year}
         setYear={setYear}
         isSaving={isSaving}
+        onCopyFromPeriod={copyFromPeriod}
+        getPreviousMonth={getPreviousMonth}
+        hasPreviousMonthData={hasPreviousMonthData}
+        getSavedPeriods={getSavedPeriods}
       />
       
       <main className="flex-1 overflow-auto">

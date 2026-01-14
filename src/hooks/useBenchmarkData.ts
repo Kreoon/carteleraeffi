@@ -103,10 +103,83 @@ export function useBenchmarkData(country: string, year: number, month: number) {
     return [];
   }, []);
 
+  // Get data from a specific period
+  const getDataFromPeriod = useCallback((fromCountry: string, fromYear: number, fromMonth: number): BenchmarkData | null => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const allData: StoredData = JSON.parse(stored);
+        const periodKey = `${fromCountry}_${fromYear}_${fromMonth}`;
+        if (allData[periodKey]) {
+          const loadedData = allData[periodKey];
+          const normalizedData: BenchmarkData = {};
+          Object.keys(loadedData).forEach(carrier => {
+            normalizedData[carrier] = {};
+            Object.keys(loadedData[carrier]).forEach(fieldId => {
+              normalizedData[carrier][fieldId] = normalizeCellValue(loadedData[carrier][fieldId]);
+            });
+          });
+          return normalizedData;
+        }
+      }
+    } catch (error) {
+      console.error('Error getting data from period:', error);
+    }
+    return null;
+  }, []);
+
+  // Copy data from another period
+  const copyFromPeriod = useCallback((fromCountry: string, fromYear: number, fromMonth: number): boolean => {
+    const sourceData = getDataFromPeriod(fromCountry, fromYear, fromMonth);
+    if (sourceData) {
+      // Filter only carriers that exist in current country
+      const currentCarriers = carriersByCountry[country] || [];
+      const filteredData: BenchmarkData = {};
+      currentCarriers.forEach(carrier => {
+        if (sourceData[carrier]) {
+          filteredData[carrier] = sourceData[carrier];
+        } else {
+          // Initialize empty data for carriers not in source
+          filteredData[carrier] = {};
+          fields.forEach(field => {
+            const defaultValue = field.type === 'boolean' ? false : '';
+            filteredData[carrier][field.id] = { value: defaultValue, note: '', color: 'none' };
+          });
+        }
+      });
+      setData(filteredData);
+      saveData(filteredData);
+      return true;
+    }
+    return false;
+  }, [country, getDataFromPeriod, saveData]);
+
+  // Get previous month info
+  const getPreviousMonth = useCallback(() => {
+    let prevMonth = month - 1;
+    let prevYear = year;
+    if (prevMonth < 0) {
+      prevMonth = 11;
+      prevYear = year - 1;
+    }
+    return { month: prevMonth, year: prevYear };
+  }, [month, year]);
+
+  // Check if previous month has data
+  const hasPreviousMonthData = useCallback(() => {
+    const { month: prevMonth, year: prevYear } = getPreviousMonth();
+    const data = getDataFromPeriod(country, prevYear, prevMonth);
+    return data !== null && Object.keys(data).length > 0;
+  }, [country, getPreviousMonth, getDataFromPeriod]);
+
   return {
     data,
     updateCell,
     isSaving,
-    getSavedPeriods
+    getSavedPeriods,
+    copyFromPeriod,
+    getPreviousMonth,
+    hasPreviousMonthData,
+    getDataFromPeriod
   };
 }
