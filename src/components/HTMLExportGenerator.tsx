@@ -953,40 +953,55 @@ export async function generateFullHTML({
     </div>
 
     <!-- Detailed Information Table -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">📑 Información Completa por Transportadora</h3>
-        <p class="card-description">Todos los campos y datos recopilados</p>
-      </div>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th style="min-width: 180px;">Campo</th>
-              ${carriers.map(carrier => `
-                <th style="text-align: center; min-width: 160px;">
-                  <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    ${getCarrierLogoHTML(carrier)}
-                    <span>${carrier}</span>
-                  </div>
-                </th>
-              `).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${fields.map((field, index) => `
-              <tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
-                <td style="font-weight: 500; color: #374151;">
-                  ${field.label}
-                  ${field.description ? `<div style="font-size: 11px; color: #64748b; font-weight: 400; margin-top: 2px;">${field.description}</div>` : ''}
-                </td>
-                ${carriers.map(carrier => getFieldValueHTML(carrier, field)).join('')}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    ${(() => {
+      // Sort carriers by devoluciones (lowest to highest)
+      const sortedCarriers = [...carriers].sort((a, b) => {
+        const devA = parseFloat(String(getDisplayValue(a, 'devoluciones') || 100));
+        const devB = parseFloat(String(getDisplayValue(b, 'devoluciones') || 100));
+        return devA - devB;
+      });
+      
+      return `
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📑 Información Completa por Transportadora</h3>
+            <p class="card-description">Ordenado por % de devoluciones (menor a mayor)</p>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th style="min-width: 180px;">Campo</th>
+                  ${sortedCarriers.map(carrier => {
+                    const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
+                    return `
+                      <th style="text-align: center; min-width: 160px;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                          ${getCarrierLogoHTML(carrier)}
+                          <span>${carrier}</span>
+                          <span style="font-size: 10px; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 9999px;">Dev: ${dev}%</span>
+                        </div>
+                      </th>
+                    `;
+                  }).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${fields.map((field, index) => `
+                  <tr style="background: ${index % 2 === 0 ? 'white' : '#f8fafc'};">
+                    <td style="font-weight: 500; color: #374151;">
+                      ${field.label}
+                      ${field.description ? `<div style="font-size: 11px; color: #64748b; font-weight: 400; margin-top: 2px;">${field.description}</div>` : ''}
+                    </td>
+                    ${sortedCarriers.map(carrier => getFieldValueHTML(carrier, field)).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    })()}
 
     <!-- Footer -->
     <div class="footer">
