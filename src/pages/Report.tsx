@@ -912,130 +912,143 @@ export default function Report() {
           <TabsContent value="detailed" className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] px-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Información Completa por Transportadora</h2>
-              <p className="text-muted-foreground">Todos los campos y datos recopilados</p>
+              <p className="text-muted-foreground">Ordenado por % de devoluciones (menor a mayor)</p>
             </div>
 
-            <Card className="overflow-hidden mx-auto">
-              <CardContent className="p-0">
-                <div className="overflow-auto max-h-[70vh] relative">
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left p-4 font-semibold min-w-[200px] sticky left-0 bg-slate-100 dark:bg-slate-800 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Campo</th>
-                        {carriers.map(carrier => {
-                          const logoUrl = getCarrierLogo(carrier);
-                          return (
-                            <th key={carrier} className="text-center p-4 font-semibold min-w-[180px] bg-muted/50">
-                              <div className="flex flex-col items-center gap-2">
-                                {logoUrl ? (
-                                  <img src={logoUrl} alt={carrier} className="w-10 h-10 object-contain rounded-lg bg-white p-1 border" />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                    <Truck className="h-5 w-5 text-primary" />
-                                  </div>
-                                )}
-                                <span>{carrier}</span>
-                              </div>
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fields.map((field, fieldIndex) => (
-                        <tr key={field.id} className={`border-b ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
-                          <td className={`p-4 font-medium sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${fieldIndex % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
-                            <div className="flex items-center gap-2">
-                              <span className="text-foreground">{field.label}</span>
-                              {field.description && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help flex-shrink-0" />
-                                  </TooltipTrigger>
-                                  <TooltipContent side="right" className="max-w-[300px] text-sm">
-                                    {field.description}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
-                          </td>
-                          {carriers.map(carrier => {
-                            const cellValue = getCellValue(carrier, field.id);
-                            const value = cellValue.value;
-                            const note = cellValue.note;
-                            const color = cellValue.color;
+            {(() => {
+              // Sort carriers by devoluciones (lowest to highest)
+              const sortedCarriers = [...carriers].sort((a, b) => {
+                const devA = parseFloat(String(getDisplayValue(a, 'devoluciones') || 100));
+                const devB = parseFloat(String(getDisplayValue(b, 'devoluciones') || 100));
+                return devA - devB;
+              });
 
-                            const colorClasses = {
-                              green: 'bg-green-100 dark:bg-green-900/50 border-l-4 border-l-green-500',
-                              yellow: 'bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-l-yellow-500',
-                              red: 'bg-red-100 dark:bg-red-900/50 border-l-4 border-l-red-500',
-                              none: ''
-                            };
-
-                            let displayContent: React.ReactNode = '-';
-
-                            if (field.type === 'boolean') {
-                              displayContent = value ? (
-                                <Badge variant="default" className="gap-1 bg-green-500">
-                                  <CheckCircle className="h-3 w-3" /> Sí
-                                </Badge>
-                              ) : (
-                                <Badge variant="destructive" className="gap-1">
-                                  <XCircle className="h-3 w-3" /> No
-                                </Badge>
-                              );
-                            } else if (field.type === 'percentage') {
-                              const numVal = parseFloat(String(value || 0));
-                              const variant = getColorVariant(field.id, numVal);
-                              displayContent = (
-                                <div className="space-y-1 w-full max-w-[120px] mx-auto">
-                                  <span className={`font-bold ${variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
-                                    {numVal}%
-                                  </span>
-                                  <ProgressBar value={numVal} max={100} variant={variant} size="sm" showLabel={false} />
-                                </div>
-                              );
-                            } else if (field.type === 'currency' || field.type === 'multi-currency') {
-                              if (typeof value === 'object' && value !== null) {
-                                displayContent = (
-                                  <div className="space-y-1 text-xs">
-                                    {Object.entries(value as Record<string, any>).map(([key, val]) => (
-                                      <div key={key} className="flex justify-between gap-2">
-                                        <span className="text-muted-foreground">{key}:</span>
-                                        <span className="font-medium">{currency} {Number(val || 0).toLocaleString()}</span>
+              return (
+                <Card className="overflow-hidden mx-auto">
+                  <CardContent className="p-0">
+                    <div className="overflow-auto max-h-[70vh] relative">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="text-left p-4 font-semibold min-w-[200px] sticky left-0 bg-slate-100 dark:bg-slate-800 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Campo</th>
+                            {sortedCarriers.map(carrier => {
+                              const logoUrl = getCarrierLogo(carrier);
+                              const dev = parseFloat(String(getDisplayValue(carrier, 'devoluciones') || 0));
+                              return (
+                                <th key={carrier} className="text-center p-4 font-semibold min-w-[180px] bg-muted/50">
+                                  <div className="flex flex-col items-center gap-2">
+                                    {logoUrl ? (
+                                      <img src={logoUrl} alt={carrier} className="w-10 h-10 object-contain rounded-lg bg-white p-1 border" />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <Truck className="h-5 w-5 text-primary" />
                                       </div>
-                                    ))}
+                                    )}
+                                    <span>{carrier}</span>
+                                    <Badge variant="outline" className="text-xs">Dev: {dev}%</Badge>
                                   </div>
-                                );
-                              } else {
-                                displayContent = value ? `${currency} ${Number(value).toLocaleString()}` : '-';
-                              }
-                            } else if (field.type === 'textarea' || field.type === 'text') {
-                              displayContent = <MarkdownContent content={String(value || '')} />;
-                            } else {
-                              displayContent = String(value || '-');
-                            }
-
-                            return (
-                              <td key={carrier} className={`p-4 text-center ${colorClasses[color || 'none']}`}>
-                                <div className="flex flex-col items-center gap-1">
-                                  {displayContent}
-                                  {note && !field.hideNote && (
-                                    <div className="text-xs text-muted-foreground italic mt-1 max-w-[150px]">
-                                      <MarkdownContent content={note} />
-                                    </div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {fields.map((field, fieldIndex) => (
+                            <tr key={field.id} className={`border-b ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
+                              <td className={`p-4 font-medium sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${fieldIndex % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-foreground">{field.label}</span>
+                                  {field.description && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help flex-shrink-0" />
+                                      </TooltipTrigger>
+                                      <TooltipContent side="right" className="max-w-[300px] text-sm">
+                                        {field.description}
+                                      </TooltipContent>
+                                    </Tooltip>
                                   )}
                                 </div>
                               </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                              {sortedCarriers.map(carrier => {
+                                const cellValue = getCellValue(carrier, field.id);
+                                const value = cellValue.value;
+                                const note = cellValue.note;
+                                const color = cellValue.color;
+
+                                const colorClasses = {
+                                  green: 'bg-green-100 dark:bg-green-900/50 border-l-4 border-l-green-500',
+                                  yellow: 'bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-l-yellow-500',
+                                  red: 'bg-red-100 dark:bg-red-900/50 border-l-4 border-l-red-500',
+                                  none: ''
+                                };
+
+                                let displayContent: React.ReactNode = '-';
+
+                                if (field.type === 'boolean') {
+                                  displayContent = value ? (
+                                    <Badge variant="default" className="gap-1 bg-green-500">
+                                      <CheckCircle className="h-3 w-3" /> Sí
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="destructive" className="gap-1">
+                                      <XCircle className="h-3 w-3" /> No
+                                    </Badge>
+                                  );
+                                } else if (field.type === 'percentage') {
+                                  const numVal = parseFloat(String(value || 0));
+                                  const variant = getColorVariant(field.id, numVal);
+                                  displayContent = (
+                                    <div className="space-y-1 w-full max-w-[120px] mx-auto">
+                                      <span className={`font-bold ${variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                                        {numVal}%
+                                      </span>
+                                      <ProgressBar value={numVal} max={100} variant={variant} size="sm" showLabel={false} />
+                                    </div>
+                                  );
+                                } else if (field.type === 'currency' || field.type === 'multi-currency') {
+                                  if (typeof value === 'object' && value !== null) {
+                                    displayContent = (
+                                      <div className="space-y-1 text-xs">
+                                        {Object.entries(value as Record<string, any>).map(([key, val]) => (
+                                          <div key={key} className="flex justify-between gap-2">
+                                            <span className="text-muted-foreground">{key}:</span>
+                                            <span className="font-medium">{currency} {Number(val || 0).toLocaleString()}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  } else {
+                                    displayContent = value ? `${currency} ${Number(value).toLocaleString()}` : '-';
+                                  }
+                                } else if (field.type === 'textarea' || field.type === 'text') {
+                                  displayContent = <MarkdownContent content={String(value || '')} />;
+                                } else {
+                                  displayContent = String(value || '-');
+                                }
+
+                                return (
+                                  <td key={carrier} className={`p-4 text-center ${colorClasses[color || 'none']}`}>
+                                    <div className="flex flex-col items-center gap-1">
+                                      {displayContent}
+                                      {note && !field.hideNote && (
+                                        <div className="text-xs text-muted-foreground italic mt-1 max-w-[150px]">
+                                          <MarkdownContent content={note} />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </TabsContent>
         </Tabs>
 
