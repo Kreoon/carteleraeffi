@@ -12,6 +12,7 @@ import { useBenchmarkConfig } from '@/hooks/useBenchmarkConfig';
 import { useSavedReports } from '@/hooks/useSavedReports';
 import { carriersByCountry, fields, monthNames, currencyByCountry, normalizeCellValue, FieldDefinition } from '@/lib/data';
 import { ProgressBar, ComparisonBar } from '@/components/ui/progress-bar';
+import { IndicatorList } from '@/components/ui/indicator-list';
 import { MarkdownContent } from '@/components/MarkdownContent';
 import { toast } from 'sonner';
 import efficommerceLogo from "@/assets/efficommerce-logo.png";
@@ -735,7 +736,10 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de paquetes devueltos. Ideal: ≤20%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={devData} max={40} valueFormatter={(v) => `${v}%`} />
+                  <IndicatorList 
+                    items={devData.map(d => ({ label: d.label, value: d.value, color: d.color, logo: d.logo }))} 
+                    valueFormatter={(v) => `${v}%`} 
+                  />
                 </CardContent>
               </Card>
               <Card>
@@ -747,7 +751,10 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de paquetes indemnizados. Ideal: ≤1%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={sinData} max={5} valueFormatter={(v) => `${v}%`} />
+                  <IndicatorList 
+                    items={sinData.map(d => ({ label: d.label, value: d.value, color: d.color, logo: d.logo }))} 
+                    valueFormatter={(v) => `${v}%`} 
+                  />
                 </CardContent>
               </Card>
             </div>
