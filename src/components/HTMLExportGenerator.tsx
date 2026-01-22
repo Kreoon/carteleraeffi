@@ -189,6 +189,32 @@ export async function generateFullHTML({
     `;
   };
 
+  // Generate indicator list HTML (badges instead of bars - better for low percentages)
+  const getIndicatorListHTML = (
+    title: string,
+    items: Array<{ name: string; value: number; variant: 'success' | 'warning' | 'danger' }>,
+    valueFormatter: (v: number) => string
+  ) => {
+    const colors = { success: '#22c55e', warning: '#eab308', danger: '#ef4444' };
+    
+    return `
+      <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;">
+        <h4 style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 16px;">${title}</h4>
+        ${items.map(item => `
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding: 4px; border-radius: 8px;">
+            <div style="width: 120px; display: flex; align-items: center; gap: 8px;">
+              ${getCarrierLogoHTML(item.name, 24)}
+              <span style="font-size: 12px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</span>
+            </div>
+            <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 60px; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 700; background: ${colors[item.variant]}; color: white;">
+              ${valueFormatter(item.value)}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  };
+
   // Generate field value HTML for detailed table
   const getFieldValueHTML = (carrier: string, field: FieldDefinition) => {
     const cellValue = getCellValue(carrier, field.id);
@@ -775,17 +801,15 @@ export async function generateFullHTML({
         carrierStats.map(c => ({ name: c.name, value: c.ans, variant: c.ansColor })),
         v => `${v}%`
       )}
-      ${getComparisonChartHTML(
+      ${getIndicatorListHTML(
         '📦 Devoluciones - Ideal: ≤20%',
         carrierStats.map(c => ({ name: c.name, value: c.dev, variant: c.devColor })),
-        v => `${v}%`,
-        40
+        v => `${v}%`
       )}
-      ${getComparisonChartHTML(
+      ${getIndicatorListHTML(
         '🛡️ Siniestros - Ideal: ≤1%',
         carrierStats.map(c => ({ name: c.name, value: c.sin, variant: c.sinColor })),
-        v => `${v}%`,
-        5
+        v => `${v}%`
       )}
     </div>
 
