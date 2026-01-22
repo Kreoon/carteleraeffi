@@ -42,7 +42,14 @@ export default function Configuration() {
 
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${configType}/${configKey.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.${fileExt}`;
+      // Sanitize filename: remove accents and special characters
+      const sanitizedKey = configKey
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics/accents
+        .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-')
+        .toLowerCase();
+      const fileName = `${configType}/${sanitizedKey}-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('markdown-images')

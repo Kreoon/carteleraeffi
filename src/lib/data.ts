@@ -10,13 +10,17 @@ export const carriersByCountry: Record<string, string[]> = {
   ],
   Ecuador: [
     "Servientrega Ecuador",
-    "Gintracom Ecuador"
+    "Gintracom Ecuador",
+    "Laarcourier"
   ],
   "República Dominicana": [
     "Gintracom República Dominicana"
   ],
   Guatemala: [
     "Cargo Expreso"
+  ],
+  "Costa Rica": [
+    "Red"
   ]
 };
 
@@ -27,7 +31,8 @@ export const currencyByCountry: Record<string, string> = {
   Colombia: "COP",
   Ecuador: "USD",
   "República Dominicana": "DOP",
-  Guatemala: "GTQ"
+  Guatemala: "GTQ",
+  "Costa Rica": "CRC"
 };
 
 // Field definitions
