@@ -796,20 +796,23 @@ export async function generateFullHTML({
     <!-- Comparison Charts -->
     <h2 class="section-title">📊 Comparación Visual</h2>
     <div class="charts-grid">
-      ${getIndicatorListHTML(
+      ${getComparisonChartHTML(
         '✅ Cumplimiento a los Tiempos de Entrega (ANS) - Meta: ≥95%',
         carrierStats.map(c => ({ name: c.name, value: c.ans, variant: c.ansColor })),
-        v => `${v}%`
+        v => `${v}%`,
+        Math.max(...carrierStats.map(c => c.ans), 1)
       )}
-      ${getIndicatorListHTML(
+      ${getComparisonChartHTML(
         '📦 Devoluciones - Ideal: ≤20%',
         carrierStats.map(c => ({ name: c.name, value: c.dev, variant: c.devColor })),
-        v => `${v}%`
+        v => `${v}%`,
+        Math.max(...carrierStats.map(c => c.dev), 1)
       )}
-      ${getIndicatorListHTML(
+      ${getComparisonChartHTML(
         '🛡️ Siniestros - Ideal: ≤1%',
         carrierStats.map(c => ({ name: c.name, value: c.sin, variant: c.sinColor })),
-        v => `${v}%`
+        v => `${v}%`,
+        Math.max(...carrierStats.map(c => c.sin), 1)
       )}
     </div>
 
