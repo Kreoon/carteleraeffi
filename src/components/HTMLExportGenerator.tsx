@@ -595,7 +595,7 @@ export async function generateFullHTML({
     
     <!-- Simple Title Header -->
     <div style="text-align: center; margin-bottom: 24px;">
-      <h1 style="font-size: 32px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">📦 Benchmark Logístico</h1>
+      <h1 style="font-size: 32px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">Cartelera de Indicadores Logísticos</h1>
       <p style="font-size: 20px; color: #64748b;">${country} - ${monthName} ${year}</p>
     </div>
 
@@ -779,12 +779,13 @@ export async function generateFullHTML({
         '📦 Devoluciones - Ideal: ≤20%',
         carrierStats.map(c => ({ name: c.name, value: c.dev, variant: c.devColor })),
         v => `${v}%`,
-        50
+        40
       )}
       ${getComparisonChartHTML(
         '🛡️ Siniestros - Ideal: ≤1%',
         carrierStats.map(c => ({ name: c.name, value: c.sin, variant: c.sinColor })),
-        v => `${v}%`
+        v => `${v}%`,
+        5
       )}
     </div>
 

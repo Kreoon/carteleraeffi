@@ -262,7 +262,7 @@ export default function Report() {
 
         {/* Simple Title Header */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-foreground">📦 Benchmark Logístico</h1>
+          <h1 className="text-3xl font-bold text-foreground">Cartelera de Indicadores Logísticos</h1>
           <p className="text-xl text-muted-foreground mt-2">{country} - {monthName} {year}</p>
         </div>
 
@@ -735,7 +735,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de paquetes devueltos. Ideal: ≤20%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={devData} max={50} valueFormatter={(v) => `${v}%`} />
+                  <ComparisonBar items={devData} max={40} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
               <Card>
@@ -747,7 +747,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de paquetes indemnizados. Ideal: ≤1%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={sinData} max={100} valueFormatter={(v) => `${v}%`} />
+                  <ComparisonBar items={sinData} max={5} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
             </div>
