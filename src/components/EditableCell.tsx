@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { FieldDefinition, currencyByCountry, CellValue } from '@/lib/data';
+import { FieldDefinition, currencyByCountry, CellValue, getFreightSubFields } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Eye, Edit } from 'lucide-react';
@@ -234,11 +234,13 @@ export function EditableCell({ field, cellValue, onChange, country }: EditableCe
   }
 
   if (field.type === 'multi-currency') {
-    const subFields = field.subFields || [];
+    // Use dynamic subfields based on country if specified, otherwise use static subFields
+    const subFields = field.dynamicSubFields 
+      ? getFreightSubFields(country) 
+      : (field.subFields || []);
     const parsedValue: Record<string, string> = typeof localValue === 'object' && localValue !== null 
       ? (localValue as Record<string, string>)
       : {};
-
     const handleSubFieldChange = (subField: string, val: string) => {
       const newValue = { ...parsedValue, [subField]: val };
       handleValueChange(newValue);
