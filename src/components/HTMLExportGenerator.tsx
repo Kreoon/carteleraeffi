@@ -136,7 +136,7 @@ export async function generateFullHTML({
   const getCarrierLogoHTML = (carrier: string, size: number = 40) => {
     const base64 = logoCache[carrier];
     if (base64) {
-      return `<img src="${base64}" alt="${carrier}" style="width: ${size}px; height: ${size}px; object-fit: contain; background: transparent; padding: 2px; border-radius: 6px; border: 1px solid #e2e8f0;" />`;
+      return `<img src="${base64}" alt="${carrier}" style="width: ${size}px; height: ${size}px; object-fit: contain;" />`;
     }
     return `<div style="width: ${size}px; height: ${size}px; background: #f0f9ff; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
       <svg width="${size * 0.5}" height="${size * 0.5}" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2">
@@ -591,7 +591,9 @@ export async function generateFullHTML({
 </head>
 <body>
   <div class="container">
-    <!-- Simple Title Header - replaces banner -->
+    ${bannerBase64 ? `<img src="${bannerBase64}" alt="Banner ${country}" class="banner" />` : ''}
+    
+    <!-- Simple Title Header -->
     <div style="text-align: center; margin-bottom: 24px;">
       <h1 style="font-size: 32px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">📦 Benchmark Logístico</h1>
       <p style="font-size: 20px; color: #64748b;">${country} - ${monthName} ${year}</p>

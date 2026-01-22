@@ -251,7 +251,16 @@ export default function Report() {
 
       {/* Report Content */}
       <main className="p-6 max-w-7xl mx-auto" ref={reportRef}>
-        {/* Simple Title Header - replaces banner */}
+        {/* Country Banner */}
+        {bannerUrl && (
+          <img 
+            src={bannerUrl} 
+            alt={`Banner ${country}`}
+            className="w-full h-48 object-cover rounded-xl mb-6 shadow-md print:h-32"
+          />
+        )}
+
+        {/* Simple Title Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-foreground">📦 Benchmark Logístico</h1>
           <p className="text-xl text-muted-foreground mt-2">{country} - {monthName} {year}</p>
@@ -325,7 +334,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {bestOverall.logo ? (
-                                <img src={bestOverall.logo} alt={bestOverall.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                <img src={bestOverall.logo} alt={bestOverall.name} className="w-10 h-10 object-contain" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -353,7 +362,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {bestAns.logo ? (
-                                <img src={bestAns.logo} alt={bestAns.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                <img src={bestAns.logo} alt={bestAns.name} className="w-10 h-10 object-contain" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -381,7 +390,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {lowestDev.logo ? (
-                                <img src={lowestDev.logo} alt={lowestDev.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                <img src={lowestDev.logo} alt={lowestDev.name} className="w-10 h-10 object-contain" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -409,7 +418,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {lowestSin.logo ? (
-                                <img src={lowestSin.logo} alt={lowestSin.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                <img src={lowestSin.logo} alt={lowestSin.name} className="w-10 h-10 object-contain" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -451,7 +460,7 @@ export default function Report() {
                                 return (
                                   <>
                                     {cheapestWithRecaudo.logo ? (
-                                      <img src={cheapestWithRecaudo.logo} alt={cheapestWithRecaudo.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                      <img src={cheapestWithRecaudo.logo} alt={cheapestWithRecaudo.name} className="w-10 h-10 object-contain" />
                                     ) : (
                                       <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                         <Truck className="h-5 w-5 text-primary" />
@@ -498,7 +507,7 @@ export default function Report() {
                                 return (
                                   <>
                                     {cheapestWithoutRecaudo.logo ? (
-                                      <img src={cheapestWithoutRecaudo.logo} alt={cheapestWithoutRecaudo.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                      <img src={cheapestWithoutRecaudo.logo} alt={cheapestWithoutRecaudo.name} className="w-10 h-10 object-contain" />
                                     ) : (
                                       <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                         <Truck className="h-5 w-5 text-primary" />
@@ -575,7 +584,7 @@ export default function Report() {
                                 {index + 1}
                               </div>
                               {carrier.logo ? (
-                                <img src={carrier.logo} alt={carrier.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                                <img src={carrier.logo} alt={carrier.name} className="w-10 h-10 object-contain" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -777,7 +786,7 @@ export default function Report() {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               {logoUrl ? (
-                                <img src={logoUrl} alt={carrier} className="w-8 h-8 object-contain rounded bg-white p-0.5 border" />
+                                <img src={logoUrl} alt={carrier} className="w-8 h-8 object-contain" />
                               ) : (
                                 <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-4 w-4 text-primary" />
@@ -899,7 +908,7 @@ export default function Report() {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               {logoUrl ? (
-                                <img src={logoUrl} alt={carrier} className="w-8 h-8 object-contain rounded bg-white p-0.5 border" />
+                                <img src={logoUrl} alt={carrier} className="w-8 h-8 object-contain" />
                               ) : (
                                 <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-4 w-4 text-primary" />
@@ -989,7 +998,7 @@ export default function Report() {
                                 <th key={carrier} className="text-center p-4 font-semibold min-w-[180px] bg-muted/50">
                                   <div className="flex flex-col items-center gap-2">
                                     {logoUrl ? (
-                                      <img src={logoUrl} alt={carrier} className="w-10 h-10 object-contain rounded-lg bg-white p-1 border" />
+                                      <img src={logoUrl} alt={carrier} className="w-10 h-10 object-contain" />
                                     ) : (
                                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                                         <Truck className="h-5 w-5 text-primary" />

@@ -128,7 +128,7 @@ export function ComparisonBar({
                     <img 
                       src={item.logo} 
                       alt={item.label}
-                      className="w-6 h-6 object-contain rounded bg-transparent p-0.5 border"
+                      className="w-6 h-6 object-contain"
                     />
                   )}
                   <span className="text-sm font-medium truncate">{item.label}</span>
