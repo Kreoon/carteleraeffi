@@ -128,31 +128,47 @@ export function useBenchmarkData(country: string, year: number, month: number) {
     return null;
   }, []);
 
-  // Copy data from another period
+  // Copy data from another period (only fields from "beneficios" onwards)
   const copyFromPeriod = useCallback((fromCountry: string, fromYear: number, fromMonth: number): boolean => {
     const sourceData = getDataFromPeriod(fromCountry, fromYear, fromMonth);
     if (sourceData) {
+      // Get the index of "beneficios" field to know which fields to copy
+      const beneficiosIndex = fields.findIndex(f => f.id === 'beneficios');
+      const fieldsToCopy = fields.slice(beneficiosIndex).map(f => f.id);
+      
       // Filter only carriers that exist in current country
       const currentCarriers = carriersByCountry[country] || [];
-      const filteredData: BenchmarkData = {};
+      const filteredData: BenchmarkData = { ...data }; // Keep existing data
+      
       currentCarriers.forEach(carrier => {
-        if (sourceData[carrier]) {
-          filteredData[carrier] = sourceData[carrier];
-        } else {
-          // Initialize empty data for carriers not in source
+        if (!filteredData[carrier]) {
           filteredData[carrier] = {};
-          fields.forEach(field => {
-            const defaultValue = field.type === 'boolean' ? false : '';
-            filteredData[carrier][field.id] = { value: defaultValue, note: '', color: 'none' };
+        }
+        
+        // Only copy fields from "beneficios" onwards
+        if (sourceData[carrier]) {
+          fieldsToCopy.forEach(fieldId => {
+            if (sourceData[carrier][fieldId]) {
+              filteredData[carrier][fieldId] = sourceData[carrier][fieldId];
+            }
           });
         }
+        
+        // Ensure all other fields exist (keep existing or initialize)
+        fields.forEach(field => {
+          if (!filteredData[carrier][field.id]) {
+            const defaultValue = field.type === 'boolean' ? false : '';
+            filteredData[carrier][field.id] = { value: defaultValue, note: '', color: 'none' };
+          }
+        });
       });
+      
       setData(filteredData);
       saveData(filteredData);
       return true;
     }
     return false;
-  }, [country, getDataFromPeriod, saveData]);
+  }, [country, data, getDataFromPeriod, saveData]);
 
   // Get previous month info
   const getPreviousMonth = useCallback(() => {

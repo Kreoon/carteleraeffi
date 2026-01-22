@@ -20,7 +20,7 @@ export const carriersByCountry: Record<string, string[]> = {
     "Cargo Expreso"
   ],
   "Costa Rica": [
-    "Red"
+    "Red Logistic"
   ]
 };
 
@@ -35,6 +35,20 @@ export const currencyByCountry: Record<string, string> = {
   "Costa Rica": "CRC"
 };
 
+// SubFields for freight cost by country
+const freightSubFieldsByCountry: Record<string, string[]> = {
+  Colombia: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"],
+  Ecuador: ["Local", "Local Especial", "Cantonal", "Provincial", "Provincial Especial", "Nacional Especial"],
+  "República Dominicana": ["Local", "Local Especial", "Cantonal", "Provincial", "Provincial Especial", "Nacional Especial"],
+  Guatemala: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"],
+  "Costa Rica": ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
+};
+
+// Get subfields for freight cost based on country
+export function getFreightSubFields(country: string): string[] {
+  return freightSubFieldsByCountry[country] || freightSubFieldsByCountry.Colombia;
+}
+
 // Field definitions
 export interface FieldDefinition {
   id: string;
@@ -43,6 +57,7 @@ export interface FieldDefinition {
   description?: string;
   hideNote?: boolean;
   subFields?: string[];
+  dynamicSubFields?: boolean; // Indicates subfields depend on country
 }
 
 export const fields: FieldDefinition[] = [
@@ -68,10 +83,16 @@ export const fields: FieldDefinition[] = [
   },
   { 
     id: "costo_promedio_con_recaudo", 
-    label: "Costo promedio flete con recaudo $120.000", 
+    label: "Costo promedio flete con recaudo", 
+    type: "currency",
+    description: "Costo promedio con bonificación del 20% y recaudo de $120.000"
+  },
+  { 
+    id: "costo_promedio_con_recaudo_detalle", 
+    label: "Detalle costo flete con recaudo", 
     type: "multi-currency",
-    description: "Bonificación del 20%",
-    subFields: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
+    description: "Desglose por tipo de trayecto",
+    dynamicSubFields: true
   },
   { id: "comision_recaudo", label: "% Comisión de recaudo", type: "textarea", hideNote: true },
   { id: "costo_manejo", label: "% Costo de manejo (seguro mercancía)", type: "textarea", hideNote: true },
@@ -79,9 +100,15 @@ export const fields: FieldDefinition[] = [
   { 
     id: "costo_promedio_sin_recaudo", 
     label: "Costo promedio flete SIN recaudo", 
+    type: "currency",
+    description: "Costo promedio sin recaudo con bonificación del 20%"
+  },
+  { 
+    id: "costo_promedio_sin_recaudo_detalle", 
+    label: "Detalle costo flete SIN recaudo", 
     type: "multi-currency",
-    description: "Bonificación del 20%",
-    subFields: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]
+    description: "Desglose por tipo de trayecto",
+    dynamicSubFields: true
   },
   { id: "redireccion_gratis", label: "¿Permite redireccionar paquetes gratis?", type: "boolean" },
   { id: "reclame_oficina", label: "Reclame oficina", type: "boolean" },

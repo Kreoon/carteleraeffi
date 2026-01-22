@@ -136,7 +136,7 @@ export async function generateFullHTML({
   const getCarrierLogoHTML = (carrier: string, size: number = 40) => {
     const base64 = logoCache[carrier];
     if (base64) {
-      return `<img src="${base64}" alt="${carrier}" style="width: ${size}px; height: ${size}px; object-fit: contain; background: white; padding: 2px; border-radius: 6px; border: 1px solid #e2e8f0;" />`;
+      return `<img src="${base64}" alt="${carrier}" style="width: ${size}px; height: ${size}px; object-fit: contain; background: transparent; padding: 2px; border-radius: 6px; border: 1px solid #e2e8f0;" />`;
     }
     return `<div style="width: ${size}px; height: ${size}px; background: #f0f9ff; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
       <svg width="${size * 0.5}" height="${size * 0.5}" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2">
@@ -159,14 +159,15 @@ export async function generateFullHTML({
     `;
   };
 
-  // Generate comparison bar chart HTML
+  // Generate comparison bar chart HTML with configurable max value
   const getComparisonChartHTML = (
     title: string,
     items: Array<{ name: string; value: number; variant: 'success' | 'warning' | 'danger' }>,
-    valueFormatter: (v: number) => string
+    valueFormatter: (v: number) => string,
+    maxValue?: number
   ) => {
     const colors = { success: '#22c55e', warning: '#eab308', danger: '#ef4444' };
-    const maxValue = Math.max(...items.map(i => i.value), 1);
+    const effectiveMax = maxValue || Math.max(...items.map(i => i.value), 1);
     
     return `
       <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;">
@@ -178,7 +179,7 @@ export async function generateFullHTML({
               <span style="font-size: 12px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</span>
             </div>
             <div style="flex: 1; height: 24px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
-              <div style="width: ${Math.max((item.value / maxValue) * 100, 10)}%; height: 100%; background: ${colors[item.variant]}; border-radius: 9999px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;">
+              <div style="width: ${Math.max(Math.min((item.value / effectiveMax) * 100, 100), 10)}%; height: 100%; background: ${colors[item.variant]}; border-radius: 9999px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;">
                 <span style="font-size: 11px; font-weight: 600; color: white;">${valueFormatter(item.value)}</span>
               </div>
             </div>
@@ -590,11 +591,10 @@ export async function generateFullHTML({
 </head>
 <body>
   <div class="container">
-    ${bannerBase64 ? `<img src="${bannerBase64}" alt="Banner ${country}" class="banner" />` : ''}
-    
-    <div class="title-card">
-      <h1>📦 Benchmark Logístico</h1>
-      <p>${country} - ${monthName} ${year}</p>
+    <!-- Simple Title Header - replaces banner -->
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h1 style="font-size: 32px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">📦 Benchmark Logístico</h1>
+      <p style="font-size: 20px; color: #64748b;">${country} - ${monthName} ${year}</p>
     </div>
 
     <!-- Executive Summary -->
@@ -662,26 +662,57 @@ export async function generateFullHTML({
         
         <div class="recommendation-card">
           <div class="label">
-            <span class="text-orange">⭐</span>
-            Más Servicios Incluidos
+            <span class="text-orange">💰</span>
+            Más Económica CON Recaudo
           </div>
           <div class="content">
-            ${getCarrierLogoHTML(mostServices.name)}
-            <div>
-              <div class="name">${mostServices.name}</div>
-              <div class="metric text-orange">${Number(mostServices.hasRedirect) + Number(mostServices.hasPickup) + Number(mostServices.hasSms)} servicios extra</div>
-            </div>
+            ${(() => {
+              const cheapestWithRecaudo = carrierStats
+                .map(c => ({
+                  name: c.name,
+                  cost: parseFloat(String(getDisplayValue(c.name, 'costo_promedio_con_recaudo') || 999999999))
+                }))
+                .filter(c => c.cost > 0 && c.cost < 999999999)
+                .sort((a, b) => a.cost - b.cost)[0];
+              
+              if (!cheapestWithRecaudo) return '<p style="font-size: 12px; color: #64748b;">Sin datos</p>';
+              
+              return `
+                ${getCarrierLogoHTML(cheapestWithRecaudo.name)}
+                <div>
+                  <div class="name">${cheapestWithRecaudo.name}</div>
+                  <div class="metric text-orange">${currency} ${cheapestWithRecaudo.cost.toLocaleString()}</div>
+                </div>
+              `;
+            })()}
           </div>
         </div>
         
         <div class="recommendation-card">
           <div class="label">
-            <span style="color: #0891b2;">🚚</span>
-            Total Transportadoras
+            <span style="color: #14b8a6;">💵</span>
+            Más Económica SIN Recaudo
           </div>
-          <div style="padding-top: 8px;">
-            <div style="font-size: 28px; font-weight: 700; color: #1e293b;">${carriers.length}</div>
-            <div style="font-size: 12px; color: #64748b;">Evaluadas en ${monthName} ${year}</div>
+          <div class="content">
+            ${(() => {
+              const cheapestWithoutRecaudo = carrierStats
+                .map(c => ({
+                  name: c.name,
+                  cost: parseFloat(String(getDisplayValue(c.name, 'costo_promedio_sin_recaudo') || 999999999))
+                }))
+                .filter(c => c.cost > 0 && c.cost < 999999999)
+                .sort((a, b) => a.cost - b.cost)[0];
+              
+              if (!cheapestWithoutRecaudo) return '<p style="font-size: 12px; color: #64748b;">Sin datos</p>';
+              
+              return `
+                ${getCarrierLogoHTML(cheapestWithoutRecaudo.name)}
+                <div>
+                  <div class="name">${cheapestWithoutRecaudo.name}</div>
+                  <div class="metric" style="color: #14b8a6;">${currency} ${cheapestWithoutRecaudo.cost.toLocaleString()}</div>
+                </div>
+              `;
+            })()}
           </div>
         </div>
       </div>
@@ -743,9 +774,10 @@ export async function generateFullHTML({
         v => `${v}%`
       )}
       ${getComparisonChartHTML(
-        '📦 Devoluciones - Ideal: ≤2%',
+        '📦 Devoluciones - Ideal: ≤20%',
         carrierStats.map(c => ({ name: c.name, value: c.dev, variant: c.devColor })),
-        v => `${v}%`
+        v => `${v}%`,
+        50
       )}
       ${getComparisonChartHTML(
         '🛡️ Siniestros - Ideal: ≤1%',

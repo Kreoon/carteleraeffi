@@ -251,24 +251,11 @@ export default function Report() {
 
       {/* Report Content */}
       <main className="p-6 max-w-7xl mx-auto" ref={reportRef}>
-        {/* Banner */}
-        {bannerUrl && (
-          <img 
-            src={bannerUrl} 
-            alt={`Banner ${country}`}
-            className="w-full h-48 object-cover rounded-xl mb-6 shadow-md print:h-32"
-          />
-        )}
-
-        {/* Title Card */}
-        <Card className="mb-6 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg">
-          <CardHeader className="text-center py-8">
-            <CardTitle className="text-3xl font-bold">📦 Benchmark Logístico</CardTitle>
-            <CardDescription className="text-primary-foreground/90 text-xl mt-2">
-              {country} - {monthName} {year}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        {/* Simple Title Header - replaces banner */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-foreground">📦 Benchmark Logístico</h1>
+          <p className="text-xl text-muted-foreground mt-2">{country} - {monthName} {year}</p>
+        </div>
 
         {/* Tabs for Dashboard vs Detailed Table */}
         <Tabs defaultValue="dashboard" className="space-y-6">
@@ -338,7 +325,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {bestOverall.logo ? (
-                                <img src={bestOverall.logo} alt={bestOverall.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                                <img src={bestOverall.logo} alt={bestOverall.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -366,7 +353,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {bestAns.logo ? (
-                                <img src={bestAns.logo} alt={bestAns.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                                <img src={bestAns.logo} alt={bestAns.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -394,7 +381,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {lowestDev.logo ? (
-                                <img src={lowestDev.logo} alt={lowestDev.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                                <img src={lowestDev.logo} alt={lowestDev.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -422,7 +409,7 @@ export default function Report() {
                             </div>
                             <div className="flex items-center gap-3">
                               {lowestSin.logo ? (
-                                <img src={lowestSin.logo} alt={lowestSin.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
+                                <img src={lowestSin.logo} alt={lowestSin.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
                               ) : (
                                 <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
                                   <Truck className="h-5 w-5 text-primary" />
@@ -445,29 +432,93 @@ export default function Report() {
                         <TooltipTrigger asChild>
                           <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                              <Star className="h-4 w-4 text-orange-500" />
-                              Más Servicios Incluidos
+                              <DollarSign className="h-4 w-4 text-orange-500" />
+                              Más Económica CON Recaudo
                             </div>
                             <div className="flex items-center gap-3">
-                              {mostServices.logo ? (
-                                <img src={mostServices.logo} alt={mostServices.name} className="w-10 h-10 object-contain rounded bg-white p-1 border" />
-                              ) : (
-                                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
-                                  <Truck className="h-5 w-5 text-primary" />
-                                </div>
-                              )}
-                              <div>
-                                <p className="font-bold text-lg">{mostServices.name}</p>
-                                <p className="text-xs text-orange-600 font-medium">
-                                  {Number(mostServices.hasRedirect) + Number(mostServices.hasPickup) + Number(mostServices.hasSms)} servicios extra
-                                </p>
-                              </div>
+                              {(() => {
+                                const cheapestWithRecaudo = carriers
+                                  .map(c => ({
+                                    name: c,
+                                    cost: parseFloat(String(getDisplayValue(c, 'costo_promedio_con_recaudo') || 999999999)),
+                                    logo: getCarrierLogo(c)
+                                  }))
+                                  .filter(c => c.cost > 0 && c.cost < 999999999)
+                                  .sort((a, b) => a.cost - b.cost)[0];
+                                
+                                if (!cheapestWithRecaudo) return <p className="text-sm text-muted-foreground">Sin datos</p>;
+                                
+                                return (
+                                  <>
+                                    {cheapestWithRecaudo.logo ? (
+                                      <img src={cheapestWithRecaudo.logo} alt={cheapestWithRecaudo.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                        <Truck className="h-5 w-5 text-primary" />
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="font-bold text-lg">{cheapestWithRecaudo.name}</p>
+                                      <p className="text-xs text-orange-600 font-medium">
+                                        {currency} {cheapestWithRecaudo.cost.toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-[320px] text-sm">
-                          <p className="font-semibold mb-1">⭐ Más Servicios Incluidos</p>
-                          <p>Transportadora con más servicios de valor agregado: redirección gratis, reclame en oficina y SMS gratuitos. Mejora la experiencia post-compra.</p>
+                          <p className="font-semibold mb-1">💰 Transportadora Más Económica CON Recaudo</p>
+                          <p>Transportadora con el menor costo promedio de flete para envíos con recaudo. Ideal para optimizar costos en ventas COD.</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="bg-background rounded-lg p-4 border shadow-sm cursor-help hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <DollarSign className="h-4 w-4 text-teal-500" />
+                              Más Económica SIN Recaudo
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {(() => {
+                                const cheapestWithoutRecaudo = carriers
+                                  .map(c => ({
+                                    name: c,
+                                    cost: parseFloat(String(getDisplayValue(c, 'costo_promedio_sin_recaudo') || 999999999)),
+                                    logo: getCarrierLogo(c)
+                                  }))
+                                  .filter(c => c.cost > 0 && c.cost < 999999999)
+                                  .sort((a, b) => a.cost - b.cost)[0];
+                                
+                                if (!cheapestWithoutRecaudo) return <p className="text-sm text-muted-foreground">Sin datos</p>;
+                                
+                                return (
+                                  <>
+                                    {cheapestWithoutRecaudo.logo ? (
+                                      <img src={cheapestWithoutRecaudo.logo} alt={cheapestWithoutRecaudo.name} className="w-10 h-10 object-contain rounded bg-transparent p-1 border" />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+                                        <Truck className="h-5 w-5 text-primary" />
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="font-bold text-lg">{cheapestWithoutRecaudo.name}</p>
+                                      <p className="text-xs text-teal-600 font-medium">
+                                        {currency} {cheapestWithoutRecaudo.cost.toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[320px] text-sm">
+                          <p className="font-semibold mb-1">💵 Transportadora Más Económica SIN Recaudo</p>
+                          <p>Transportadora con el menor costo promedio de flete para envíos prepagados (sin recaudo). Ideal para e-commerce con pago online.</p>
                         </TooltipContent>
                       </Tooltip>
 
@@ -672,10 +723,10 @@ export default function Report() {
                     <TrendingDown className="h-4 w-4 text-yellow-500" />
                     Devoluciones
                   </CardTitle>
-                  <CardDescription className="text-xs">Porcentaje de paquetes devueltos. Ideal: ≤2%</CardDescription>
+                  <CardDescription className="text-xs">Porcentaje de paquetes devueltos. Ideal: ≤20%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={devData} max={100} valueFormatter={(v) => `${v}%`} />
+                  <ComparisonBar items={devData} max={50} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
               <Card>
