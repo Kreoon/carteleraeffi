@@ -724,7 +724,10 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de entregas a tiempo. Meta: ≥95%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={ansData} max={100} valueFormatter={(v) => `${v}%`} />
+                  <IndicatorList 
+                    items={ansData.map(d => ({ label: d.label, value: d.value, color: d.color, logo: d.logo }))} 
+                    valueFormatter={(v) => `${v}%`} 
+                  />
                 </CardContent>
               </Card>
               <Card>

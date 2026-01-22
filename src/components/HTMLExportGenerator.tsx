@@ -796,7 +796,7 @@ export async function generateFullHTML({
     <!-- Comparison Charts -->
     <h2 class="section-title">📊 Comparación Visual</h2>
     <div class="charts-grid">
-      ${getComparisonChartHTML(
+      ${getIndicatorListHTML(
         '✅ Cumplimiento a los Tiempos de Entrega (ANS) - Meta: ≥95%',
         carrierStats.map(c => ({ name: c.name, value: c.ans, variant: c.ansColor })),
         v => `${v}%`
