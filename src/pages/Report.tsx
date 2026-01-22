@@ -724,10 +724,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de entregas a tiempo. Meta: ≥95%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <IndicatorList 
-                    items={ansData.map(d => ({ label: d.label, value: d.value, color: d.color, logo: d.logo }))} 
-                    valueFormatter={(v) => `${v}%`} 
-                  />
+                  <ComparisonBar items={ansData} max={Math.max(...ansData.map(d => d.value), 1)} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
               <Card>
@@ -739,10 +736,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de paquetes devueltos. Ideal: ≤20%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <IndicatorList 
-                    items={devData.map(d => ({ label: d.label, value: d.value, color: d.color, logo: d.logo }))} 
-                    valueFormatter={(v) => `${v}%`} 
-                  />
+                  <ComparisonBar items={devData} max={Math.max(...devData.map(d => d.value), 1)} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
               <Card>
@@ -754,10 +748,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de paquetes indemnizados. Ideal: ≤1%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <IndicatorList 
-                    items={sinData.map(d => ({ label: d.label, value: d.value, color: d.color, logo: d.logo }))} 
-                    valueFormatter={(v) => `${v}%`} 
-                  />
+                  <ComparisonBar items={sinData} max={Math.max(...sinData.map(d => d.value), 1)} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
             </div>
