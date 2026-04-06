@@ -56,6 +56,27 @@ export default function Report() {
     return getCellValue(carrier, fieldId).value;
   };
 
+  // Parse float that treats 0 as valid (not falsy), only uses fallback for empty/undefined
+  const safeParseFloat = (value: any, fallback: number): number => {
+    if (value === '' || value === undefined || value === null) return fallback;
+    const parsed = parseFloat(String(value));
+    return isNaN(parsed) ? fallback : parsed;
+  };
+
+  // Calculate average cost from detail (multi-currency) field
+  const getAverageCostFromDetail = (carrier: string, detailFieldId: string): number => {
+    const detailValue = getDisplayValue(carrier, detailFieldId);
+    if (detailValue && typeof detailValue === 'object') {
+      const values = Object.values(detailValue as Record<string, string>)
+        .map(v => parseFloat(String(v)))
+        .filter(v => !isNaN(v) && v > 0);
+      if (values.length > 0) {
+        return values.reduce((sum, v) => sum + v, 0) / values.length;
+      }
+    }
+    return NaN;
+  };
+
   const getColorVariant = (fieldId: string, value: number): 'success' | 'warning' | 'danger' => {
     if (fieldId === 'cumplimiento_ans') {
       return value >= 95 ? 'success' : value >= 85 ? 'warning' : 'danger';
@@ -298,8 +319,8 @@ export default function Report() {
                   const carrierStats = carriers.map(c => ({
                     name: c,
                     ans: parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0)),
-                    dev: parseFloat(String(getDisplayValue(c, 'devoluciones') || 100)),
-                    sin: parseFloat(String(getDisplayValue(c, 'siniestros') || 100)),
+                    dev: safeParseFloat(getDisplayValue(c, 'devoluciones'), 100),
+                    sin: safeParseFloat(getDisplayValue(c, 'siniestros'), 100),
                     logo: getCarrierLogo(c),
                     hasRedirect: !!getDisplayValue(c, 'redireccion_gratis'),
                     hasPickup: !!getDisplayValue(c, 'reclame_oficina'),
@@ -450,10 +471,10 @@ export default function Report() {
                                 const cheapestWithRecaudo = carriers
                                   .map(c => ({
                                     name: c,
-                                    cost: parseFloat(String(getDisplayValue(c, 'costo_promedio_con_recaudo') || 999999999)),
+                                    cost: getAverageCostFromDetail(c, 'costo_promedio_con_recaudo_detalle'),
                                     logo: getCarrierLogo(c)
                                   }))
-                                  .filter(c => c.cost > 0 && c.cost < 999999999)
+                                  .filter(c => !isNaN(c.cost) && c.cost > 0)
                                   .sort((a, b) => a.cost - b.cost)[0];
                                 
                                 if (!cheapestWithRecaudo) return <p className="text-sm text-muted-foreground">Sin datos</p>;
@@ -470,7 +491,7 @@ export default function Report() {
                                     <div>
                                       <p className="font-bold text-lg">{cheapestWithRecaudo.name}</p>
                                       <p className="text-xs text-orange-600 font-medium">
-                                        {currency} {cheapestWithRecaudo.cost.toLocaleString()}
+                                        {currency} {Math.round(cheapestWithRecaudo.cost).toLocaleString()}
                                       </p>
                                     </div>
                                   </>
@@ -497,10 +518,10 @@ export default function Report() {
                                 const cheapestWithoutRecaudo = carriers
                                   .map(c => ({
                                     name: c,
-                                    cost: parseFloat(String(getDisplayValue(c, 'costo_promedio_sin_recaudo') || 999999999)),
+                                    cost: getAverageCostFromDetail(c, 'costo_promedio_sin_recaudo_detalle'),
                                     logo: getCarrierLogo(c)
                                   }))
-                                  .filter(c => c.cost > 0 && c.cost < 999999999)
+                                  .filter(c => !isNaN(c.cost) && c.cost > 0)
                                   .sort((a, b) => a.cost - b.cost)[0];
                                 
                                 if (!cheapestWithoutRecaudo) return <p className="text-sm text-muted-foreground">Sin datos</p>;
@@ -517,7 +538,7 @@ export default function Report() {
                                     <div>
                                       <p className="font-bold text-lg">{cheapestWithoutRecaudo.name}</p>
                                       <p className="text-xs text-teal-600 font-medium">
-                                        {currency} {cheapestWithoutRecaudo.cost.toLocaleString()}
+                                        {currency} {Math.round(cheapestWithoutRecaudo.cost).toLocaleString()}
                                       </p>
                                     </div>
                                   </>
@@ -568,8 +589,8 @@ export default function Report() {
                 {(() => {
                   const ranked = carriers.map(c => {
                     const ans = parseFloat(String(getDisplayValue(c, 'cumplimiento_ans') || 0));
-                    const dev = parseFloat(String(getDisplayValue(c, 'devoluciones') || 100));
-                    const sin = parseFloat(String(getDisplayValue(c, 'siniestros') || 100));
+                    const dev = safeParseFloat(getDisplayValue(c, 'devoluciones'), 100);
+                    const sin = safeParseFloat(getDisplayValue(c, 'siniestros'), 100);
                     // Pesos: Dev 60%, ANS 35%, Sin 5%
                     const score = (ans * 0.35) + ((100 - dev * 5) * 0.60) + ((100 - sin * 10) * 0.05);
                     return { name: c, ans, dev, sin, score, logo: getCarrierLogo(c) };
@@ -979,8 +1000,8 @@ export default function Report() {
             {(() => {
               // Sort carriers by devoluciones (lowest to highest)
               const sortedCarriers = [...carriers].sort((a, b) => {
-                const devA = parseFloat(String(getDisplayValue(a, 'devoluciones') || 100));
-                const devB = parseFloat(String(getDisplayValue(b, 'devoluciones') || 100));
+                const devA = safeParseFloat(getDisplayValue(a, 'devoluciones'), 100);
+                const devB = safeParseFloat(getDisplayValue(b, 'devoluciones'), 100);
                 return devA - devB;
               });
 

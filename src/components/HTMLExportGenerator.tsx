@@ -59,6 +59,25 @@ export async function generateFullHTML({
     return normalizeCellValue(data[carrier]?.[fieldId]);
   };
 
+  const safeParseFloat = (value: any, fallback: number): number => {
+    if (value === '' || value === undefined || value === null) return fallback;
+    const parsed = parseFloat(String(value));
+    return isNaN(parsed) ? fallback : parsed;
+  };
+
+  const getAverageCostFromDetail = (carrier: string, detailFieldId: string): number => {
+    const detailValue = getDisplayValue(carrier, detailFieldId);
+    if (detailValue && typeof detailValue === 'object') {
+      const values = Object.values(detailValue as Record<string, string>)
+        .map(v => parseFloat(String(v)))
+        .filter(v => !isNaN(v) && v > 0);
+      if (values.length > 0) {
+        return values.reduce((sum, v) => sum + v, 0) / values.length;
+      }
+    }
+    return NaN;
+  };
+
   const getColorVariant = (fieldId: string, value: number): 'success' | 'warning' | 'danger' => {
     if (fieldId === 'cumplimiento_ans') {
       return value >= 95 ? 'success' : value >= 85 ? 'warning' : 'danger';
@@ -87,8 +106,8 @@ export async function generateFullHTML({
     const sinCell = getCellValue(c, 'siniestros');
     
     const ans = parseFloat(String(ansCell.value || 0));
-    const dev = parseFloat(String(devCell.value || 100));
-    const sin = parseFloat(String(sinCell.value || 100));
+    const dev = safeParseFloat(devCell.value, 100);
+    const sin = safeParseFloat(sinCell.value, 100);
     
     return {
       name: c,
@@ -698,9 +717,9 @@ export async function generateFullHTML({
               const cheapestWithRecaudo = carrierStats
                 .map(c => ({
                   name: c.name,
-                  cost: parseFloat(String(getDisplayValue(c.name, 'costo_promedio_con_recaudo') || 999999999))
+                  cost: getAverageCostFromDetail(c.name, 'costo_promedio_con_recaudo_detalle')
                 }))
-                .filter(c => c.cost > 0 && c.cost < 999999999)
+                .filter(c => !isNaN(c.cost) && c.cost > 0)
                 .sort((a, b) => a.cost - b.cost)[0];
               
               if (!cheapestWithRecaudo) return '<p style="font-size: 12px; color: #64748b;">Sin datos</p>';
@@ -709,7 +728,7 @@ export async function generateFullHTML({
                 ${getCarrierLogoHTML(cheapestWithRecaudo.name)}
                 <div>
                   <div class="name">${cheapestWithRecaudo.name}</div>
-                  <div class="metric text-orange">${currency} ${cheapestWithRecaudo.cost.toLocaleString()}</div>
+                  <div class="metric text-orange">${currency} ${Math.round(cheapestWithRecaudo.cost).toLocaleString()}</div>
                 </div>
               `;
             })()}
@@ -726,9 +745,9 @@ export async function generateFullHTML({
               const cheapestWithoutRecaudo = carrierStats
                 .map(c => ({
                   name: c.name,
-                  cost: parseFloat(String(getDisplayValue(c.name, 'costo_promedio_sin_recaudo') || 999999999))
+                  cost: getAverageCostFromDetail(c.name, 'costo_promedio_sin_recaudo_detalle')
                 }))
-                .filter(c => c.cost > 0 && c.cost < 999999999)
+                .filter(c => !isNaN(c.cost) && c.cost > 0)
                 .sort((a, b) => a.cost - b.cost)[0];
               
               if (!cheapestWithoutRecaudo) return '<p style="font-size: 12px; color: #64748b;">Sin datos</p>';
@@ -737,7 +756,7 @@ export async function generateFullHTML({
                 ${getCarrierLogoHTML(cheapestWithoutRecaudo.name)}
                 <div>
                   <div class="name">${cheapestWithoutRecaudo.name}</div>
-                  <div class="metric" style="color: #14b8a6;">${currency} ${cheapestWithoutRecaudo.cost.toLocaleString()}</div>
+                  <div class="metric" style="color: #14b8a6;">${currency} ${Math.round(cheapestWithoutRecaudo.cost).toLocaleString()}</div>
                 </div>
               `;
             })()}
@@ -976,8 +995,6 @@ export async function generateFullHTML({
             <tr>
               <th>Transportadora</th>
               <th style="text-align: center;">Costo Envío Nacional</th>
-              <th style="text-align: center;">Costo Promedio Con Recaudo</th>
-              <th style="text-align: center;">Costo Promedio Sin Recaudo</th>
             </tr>
           </thead>
           <tbody>
@@ -1004,8 +1021,6 @@ export async function generateFullHTML({
                     </div>
                   </td>
                   <td style="text-align: center; font-size: 12px;">${formatCost(stat.costo_envio_nacional)}</td>
-                  <td style="text-align: left; padding-left: 20px;">${formatCost(stat.costo_promedio_con_recaudo)}</td>
-                  <td style="text-align: left; padding-left: 20px;">${formatCost(stat.costo_promedio_sin_recaudo)}</td>
                 </tr>
               `;
             }).join('')}
@@ -1018,8 +1033,8 @@ export async function generateFullHTML({
     ${(() => {
       // Sort carriers by devoluciones (lowest to highest)
       const sortedCarriers = [...carriers].sort((a, b) => {
-        const devA = parseFloat(String(getDisplayValue(a, 'devoluciones') || 100));
-        const devB = parseFloat(String(getDisplayValue(b, 'devoluciones') || 100));
+        const devA = safeParseFloat(getDisplayValue(a, 'devoluciones'), 100);
+        const devB = safeParseFloat(getDisplayValue(b, 'devoluciones'), 100);
         return devA - devB;
       });
       

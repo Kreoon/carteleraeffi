@@ -32,7 +32,17 @@ export function BenchmarkTable({ country, data, onCellChange }: BenchmarkTablePr
             </tr>
           </thead>
           <tbody>
-            {fields.map((field, index) => (
+            {fields
+              .filter((field) => {
+                if (field.id === 'costo_promedio_con_recaudo' || field.id === 'costo_promedio_sin_recaudo') {
+                  return false;
+                }
+                if (country === 'Guatemala' && (field.id === 'costo_promedio_con_recaudo_detalle' || field.id === 'costo_promedio_sin_recaudo_detalle')) {
+                  return false;
+                }
+                return true;
+              })
+              .map((field, index) => (
               <>
                 {field.id === 'cumplimiento_ans' && (
                   <SectionHeader 

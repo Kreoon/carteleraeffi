@@ -38,7 +38,7 @@ export const currencyByCountry: Record<string, string> = {
 // SubFields for freight cost by country
 const freightSubFieldsByCountry: Record<string, string[]> = {
   Colombia: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"],
-  Ecuador: ["Local", "Local Especial", "Cantonal", "Provincial", "Provincial Especial", "Nacional Especial"],
+  Ecuador: ["Local", "Local Especial", "Cantonal", "Provincial", "Provincial Especial", "Especial", "Principal", "Secundaria", "Oriente"],
   "República Dominicana": ["Local", "Local Especial", "Cantonal", "Provincial", "Provincial Especial", "Nacional Especial"],
   Guatemala: ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"],
   "Costa Rica": ["Urbano", "Regional", "Zonal", "Territorial", "Otros", "Especial", "Difícil Acceso", "Veredas"]

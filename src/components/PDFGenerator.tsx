@@ -385,8 +385,6 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
             <tr>
               <th>Transportadora</th>
               <th>Costo Envío Nacional</th>
-              <th>Costo c/Recaudo</th>
-              <th>Costo s/Recaudo</th>
               <th>% Comisión</th>
               <th>% Manejo</th>
             </tr>
@@ -396,8 +394,6 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
               <tr>
                 <td><strong>${carrier}</strong></td>
                 <td>${currency} ${Number(getCellDisplayValue(data[carrier]?.costo_envio_nacional) || 0).toLocaleString()}</td>
-                <td>${currency} ${Number(getCellDisplayValue(data[carrier]?.costo_promedio_con_recaudo) || 0).toLocaleString()}</td>
-                <td>${currency} ${Number(getCellDisplayValue(data[carrier]?.costo_promedio_sin_recaudo) || 0).toLocaleString()}</td>
                 <td>${getCellDisplayValue(data[carrier]?.comision_recaudo) || 0}%</td>
                 <td>${getCellDisplayValue(data[carrier]?.costo_manejo) || 0}%</td>
               </tr>
