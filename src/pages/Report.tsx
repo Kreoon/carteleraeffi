@@ -338,9 +338,9 @@ export default function Report() {
           </div>
         </div>
 
-        {/* Tabs for Dashboard vs Detailed Table */}
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto print:hidden">
+        {/* Tabs for Dashboard vs Detailed Table. En print mode se fuerzan ambas visibles */}
+        <Tabs defaultValue="dashboard" className={`space-y-6 ${isPrintMode ? '[&_[role=tabpanel]]:!block [&_[role=tabpanel][hidden]]:!block' : ''}`}>
+          <TabsList className={`grid w-full grid-cols-2 max-w-md mx-auto print:hidden ${isPrintMode ? 'hidden' : ''}`}>
             <TabsTrigger value="dashboard" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -352,7 +352,7 @@ export default function Report() {
           </TabsList>
 
           {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="space-y-6">
+          <TabsContent value="dashboard" className="space-y-6" forceMount={isPrintMode ? true : undefined}>
             {/* Executive Summary - Recommendations */}
             <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
               <CardHeader>
@@ -1041,7 +1041,14 @@ export default function Report() {
           </TabsContent>
 
           {/* Detailed Table Tab */}
-          <TabsContent value="detailed" className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] px-4">
+          <TabsContent
+            value="detailed"
+            forceMount={isPrintMode ? true : undefined}
+            className={isPrintMode
+              ? 'px-4 mt-12 pt-12 border-t-2'
+              : 'w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] px-4'
+            }
+          >
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Información Completa por Transportadora</h2>
               <p className="text-muted-foreground">Ordenado por % de devoluciones (menor a mayor)</p>
