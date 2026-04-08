@@ -38,18 +38,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let browser;
   try {
+    console.log('[api/pdf] Launching chromium, target:', reportUrl);
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
       defaultViewport: { width: 1280, height: 1800, deviceScaleFactor: 2 },
       executablePath: await chromium.executablePath(),
-      headless: true,
+      headless: chromium.headless,
     });
+    console.log('[api/pdf] Browser launched');
 
     const page = await browser.newPage();
-    await page.goto(reportUrl, { waitUntil: 'networkidle0', timeout: 25000 });
+    // domcontentloaded es mucho más rápido que networkidle0 (SPA puede nunca quedar idle)
+    await page.goto(reportUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    console.log('[api/pdf] Page loaded, waiting for content');
 
-    // Esperar un poco a que terminen animaciones / lazy images
-    await new Promise((r) => setTimeout(r, 800));
+    // Esperar a que el contenido del reporte esté renderizado (título del carrier o card)
+    await page
+      .waitForSelector('h1', { timeout: 10000 })
+      .catch(() => console.warn('[api/pdf] h1 selector timeout'));
+
+    // Dar 2s extra para que React termine de renderizar todas las secciones y cargar imágenes
+    await new Promise((r) => setTimeout(r, 2500));
 
     const pdf = await page.pdf({
       format: 'A4',
