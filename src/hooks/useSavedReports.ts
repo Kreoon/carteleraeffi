@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { BenchmarkData } from '@/lib/data';
 import { Json } from '@/integrations/supabase/types';
@@ -26,6 +27,7 @@ export function useSavedReports() {
 
     if (error) {
       console.error('Error fetching reports:', error);
+      toast.error('No se pudieron cargar los reportes guardados');
     } else if (data) {
       const mappedReports: SavedReport[] = data.map(item => ({
         id: item.id,
@@ -64,6 +66,7 @@ export function useSavedReports() {
 
       if (error) {
         console.error('Error updating report:', error);
+        toast.error('Error al actualizar el reporte');
         return false;
       }
     } else {
@@ -74,6 +77,7 @@ export function useSavedReports() {
 
       if (error) {
         console.error('Error saving report:', error);
+        toast.error('Error al guardar el reporte');
         return false;
       }
     }
@@ -90,8 +94,10 @@ export function useSavedReports() {
 
     if (error) {
       console.error('Error deleting report:', error);
+      toast.error('Error al eliminar el reporte');
       return false;
     }
+    toast.success('Reporte eliminado');
     
     await fetchReports();
     return true;

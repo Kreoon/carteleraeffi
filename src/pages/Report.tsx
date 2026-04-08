@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save, Trophy, Star, Info, Download } from 'lucide-react';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
+import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Truck, BarChart3, Table2, AlertTriangle, Shield, Save, Trophy, Star, Info, Download, Share2 } from 'lucide-react';
+import { getCountryTheme } from '@/lib/countryTheme';
+import { ShareDialog } from '@/components/ShareDialog';
 import { generateFullHTML } from '@/components/HTMLExportGenerator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,10 +21,17 @@ import efficommerceLogo from "@/assets/efficommerce-logo.png";
 
 export default function Report() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const isEmbed = location.pathname.startsWith('/embed');
+  const isPrintMode = searchParams.get('print') === '1';
+  const now = new Date();
   const country = searchParams.get('country') || 'Colombia';
-  const month = parseInt(searchParams.get('month') || '9');
-  const year = parseInt(searchParams.get('year') || '2025');
+  const month = parseInt(searchParams.get('month') ?? String(now.getMonth()));
+  const year = parseInt(searchParams.get('year') ?? String(now.getFullYear()));
   const isSavedView = searchParams.get('saved') === 'true';
+  const theme = getCountryTheme(country);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   const { data: localData } = useBenchmarkData(country, year, month);
   const { getCountryBanner, getCarrierLogo, isLoading: configLoading } = useBenchmarkConfig();
@@ -126,8 +135,28 @@ export default function Report() {
     }
   };
 
-  const downloadPDF = () => {
-    window.print();
+  const downloadPDF = async () => {
+    setIsGeneratingPDF(true);
+    const toastId = toast.loading('Generando PDF premium...');
+    try {
+      const url = `/api/pdf?country=${encodeURIComponent(country)}&month=${month}&year=${year}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `cartelera-${country.toLowerCase().replace(/\s+/g, '-')}-${monthName.toLowerCase()}-${year}.pdf`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast.success('PDF descargado', { id: toastId });
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast.error('Error al generar el PDF. Intentando fallback de impresión...', { id: toastId });
+      // Fallback a window.print si el endpoint falla
+      setTimeout(() => window.print(), 500);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   if (configLoading) {
@@ -245,7 +274,8 @@ export default function Report() {
 
   return (
     <div className="min-h-screen bg-background print:bg-white">
-      {/* Header - hidden in print */}
+      {/* Header - hidden in print and embed mode */}
+      {!isEmbed && !isPrintMode && (
       <header className="bg-card border-b border-border px-6 py-4 print:hidden sticky top-0 z-10">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
@@ -261,21 +291,23 @@ export default function Report() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={downloadHTML} className="gap-2" disabled={isExporting}>
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              {isExporting ? 'Exportando...' : 'Descargar HTML'}
+            <Button
+              variant="outline"
+              onClick={() => setShareOpen(true)}
+              className="gap-2"
+              aria-label="Compartir o embeber reporte"
+            >
+              <Share2 className="h-4 w-4" />
+              Compartir / Embed
             </Button>
-            <Button onClick={downloadPDF} className="gap-2">
-              <FileText className="h-4 w-4" />
-              Descargar PDF
+            <Button onClick={downloadPDF} className="gap-2" disabled={isGeneratingPDF} aria-label="Descargar PDF premium">
+              {isGeneratingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+              {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
             </Button>
           </div>
         </div>
       </header>
+      )}
 
       {/* Report Content */}
       <main className="p-6 max-w-7xl mx-auto" ref={reportRef}>
@@ -288,10 +320,22 @@ export default function Report() {
           />
         )}
 
-        {/* Simple Title Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Cartelera de Indicadores Logísticos</h1>
-          <p className="text-xl text-muted-foreground mt-2">{country} - {monthName} {year}</p>
+        {/* Premium Title Header con branding por país */}
+        <div
+          className={`relative overflow-hidden rounded-2xl mb-8 px-8 py-10 text-center bg-gradient-to-br ${theme.gradient} shadow-lg`}
+          style={{ borderTop: `4px solid ${theme.accent}` }}
+        >
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px]" aria-hidden="true" />
+          <div className="relative">
+            <div
+              className="inline-block px-4 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-3"
+              style={{ backgroundColor: theme.accent, color: '#fff' }}
+            >
+              Reporte Logístico · {country}
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Cartelera de Indicadores Logísticos</h1>
+            <p className="text-xl text-slate-700 mt-2 font-medium">{monthName} {year}</p>
+          </div>
         </div>
 
         {/* Tabs for Dashboard vs Detailed Table */}
@@ -1157,6 +1201,15 @@ export default function Report() {
           <p>{monthName} {year} - {country}</p>
         </div>
       </main>
+
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        country={country}
+        year={year}
+        month={month}
+        onDownloadHTML={downloadHTML}
+      />
     </div>
   );
 }
