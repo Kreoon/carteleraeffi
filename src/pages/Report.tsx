@@ -1041,7 +1041,18 @@ export default function Report() {
                           </tr>
                         </thead>
                         <tbody>
-                          {fields.map((field, fieldIndex) => (
+                          {fields.filter(field => {
+                            // Hide row if ALL carriers have empty values for this field
+                            return sortedCarriers.some(carrier => {
+                              const v = getCellValue(carrier, field.id).value;
+                              if (v === null || v === undefined) return false;
+                              if (typeof v === 'boolean') return true;
+                              if (typeof v === 'object') {
+                                return Object.values(v).some(sv => sv !== '' && sv !== null && sv !== undefined);
+                              }
+                              return String(v).trim() !== '';
+                            });
+                          }).map((field, fieldIndex) => (
                             <tr key={field.id} className={`border-b ${fieldIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
                               <td className={`p-4 font-medium sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${fieldIndex % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
                                 <div className="flex items-center gap-2">
