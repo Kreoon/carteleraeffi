@@ -61,7 +61,7 @@ export interface FieldDefinition {
 }
 
 export const fields: FieldDefinition[] = [
-  { id: "cumplimiento_ans", label: "Cumplimiento ANS", type: "percentage", hideNote: true, description: "Este indicador nos muestra el % de pedidos que fueron entregados a tiempo de acuerdo con la promesa de días de entrega de la transportadora" },
+  { id: "cumplimiento_ans", label: "Cumplimiento ANS", type: "percentage", description: "Este indicador nos muestra el % de pedidos que fueron entregados a tiempo de acuerdo con la promesa de días de entrega de la transportadora" },
   { id: "devoluciones", label: "% Devoluciones", type: "percentage" },
   { id: "siniestros", label: "% Siniestros", type: "percentage", hideNote: true, description: "% de paquetes que pasaron a indemnización" },
   { id: "regiones_superior", label: "Regiones con desempeño superior al promedio", type: "textarea", description: "Regiones donde la transportadora presentó un desempeño superior al promedio en cuanto a calidad, servicio y tiempos de entrega" },
@@ -70,7 +70,6 @@ export const fields: FieldDefinition[] = [
     id: "costo_envio_nacional", 
     label: "Costo de un envío nacional", 
     type: "multi-currency",
-    description: "Tarifa con bonificación del 20% en fletes, valor declarado mínimo y recaudo de $120.000",
     subFields: ["Valor Con Recaudo", "Valor Sin Recaudo"]
   },
   { id: "beneficios", label: "Beneficios", type: "textarea", hideNote: true },
