@@ -24,9 +24,15 @@ export default function Report() {
   const year = parseInt(searchParams.get('year') || '2025');
   const isSavedView = searchParams.get('saved') === 'true';
   
-  const { data } = useBenchmarkData(country, year, month);
+  const { data: localData } = useBenchmarkData(country, year, month);
   const { getCountryBanner, getCarrierLogo, isLoading: configLoading } = useBenchmarkConfig();
-  const { saveReport } = useSavedReports();
+  const { saveReport, reports: savedReports, isLoading: savedLoading } = useSavedReports();
+
+  // When viewing a saved report, prefer data from Supabase; otherwise use localStorage
+  const savedMatch = isSavedView
+    ? savedReports.find(r => r.country === country && r.year === year && r.month === month)
+    : undefined;
+  const data = (isSavedView && savedMatch ? savedMatch.data : localData) || {};
   const reportRef = useRef<HTMLDivElement>(null);
   const [hasSaved, setHasSaved] = useState(false);
   
