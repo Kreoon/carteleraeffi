@@ -80,7 +80,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `attachment; filename="cartelera-${country.toLowerCase().replace(/\s+/g, '-')}-${month}-${year}.pdf"`
     );
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
-    return res.status(200).send(pdf);
+    const buffer = Buffer.from(pdf);
+    res.setHeader('Content-Length', buffer.length);
+    res.status(200);
+    res.end(buffer);
+    return;
   } catch (err: any) {
     console.error('[api/pdf] Error:', err);
     return res.status(500).json({ error: 'PDF generation failed', detail: err?.message });
