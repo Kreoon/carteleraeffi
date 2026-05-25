@@ -47,10 +47,11 @@ async function imageToBase64(url: string): Promise<string | null> {
   }
 }
 
-/** HTML de logo de transportadora (img base64 o ícono SVG placeholder) */
-function logoHTML(base64: string | null | undefined, name: string, size = 40): string {
+/** HTML de logo de transportadora (img base64 o ícono SVG placeholder).
+ *  alt="" para logos decorativos — evita que el text-layer del PDF duplique el nombre. */
+function logoHTML(base64: string | null | undefined, _name: string, size = 40): string {
   if (base64) {
-    return `<img src="${base64}" alt="${name}" style="width:${size}px;height:${size}px;object-fit:contain;flex-shrink:0;" />`;
+    return `<img src="${base64}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;flex-shrink:0;" />`;
   }
   return `<div style="width:${size}px;height:${size}px;background:#f0f9ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
     <svg width="${size * 0.55}" height="${size * 0.55}" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2">
@@ -74,6 +75,7 @@ function num(data: BenchmarkData, carrier: string, fieldId: string, fallback = 0
 
 function stripMd(text: string): string {
   return text
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1') // imágenes markdown → solo alt text
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/\*(.+?)\*/g, '$1')
     .replace(/^#+\s+/gm, '')
@@ -81,6 +83,82 @@ function stripMd(text: string): string {
     .replace(/\[(.+?)\]\(.+?\)/g, '$1')
     .replace(/^[-*]\s+/gm, '• ')
     .trim();
+}
+
+/**
+ * Escanea todos los campos textarea/text del data y precarga como base64
+ * las imágenes referenciadas con sintaxis markdown ![alt](url).
+ */
+async function preloadMarkdownImages(
+  data: BenchmarkData,
+  carriers: string[]
+): Promise<Record<string, string | null>> {
+  const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const urls = new Set<string>();
+
+  for (const carrier of carriers) {
+    if (!data[carrier]) continue;
+    for (const raw of Object.values(data[carrier])) {
+      const normalized = normalizeCellValue(raw);
+      const val = normalized.value;
+      if (typeof val === 'string') {
+        imgRegex.lastIndex = 0;
+        let match;
+        while ((match = imgRegex.exec(val)) !== null) {
+          urls.add(match[2]);
+        }
+      }
+    }
+  }
+
+  const cache: Record<string, string | null> = {};
+  await Promise.all(
+    Array.from(urls).map(async (url) => {
+      cache[url] = await imageToBase64(url);
+    })
+  );
+
+  return cache;
+}
+
+/**
+ * Renderiza texto con formato markdown para HTML:
+ * - Las imágenes ![alt](url) se convierten en <img> incrustadas (base64 si disponible)
+ * - El resto del markdown se convierte a HTML básico
+ */
+function renderTextareaHTML(
+  text: string,
+  mdImageCache: Record<string, string | null>
+): string {
+  const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  let result = '';
+  let lastIndex = 0;
+  let match;
+
+  while ((match = imgRegex.exec(text)) !== null) {
+    // Texto antes de esta imagen
+    const before = text.slice(lastIndex, match.index);
+    if (before.trim()) {
+      const safe = stripMd(before).replace(/\n/g, '<br>');
+      result += `<div style="white-space:pre-line;margin-bottom:4px;">${safe}</div>`;
+    }
+
+    // La imagen incrustada
+    const [, alt, url] = match;
+    const src = mdImageCache[url] || url;
+    result += `<img src="${src}" alt="${alt}" style="max-width:100%;border-radius:6px;margin:6px 0;display:block;" />`;
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Texto restante después de la última imagen
+  const remaining = text.slice(lastIndex);
+  if (remaining.trim()) {
+    const safe = stripMd(remaining).replace(/\n/g, '<br>');
+    result += `<div style="white-space:pre-line;">${safe}</div>`;
+  }
+
+  return result;
 }
 
 function colorClass(c: string | null | undefined): 'green' | 'yellow' | 'red' | '' {
@@ -111,7 +189,8 @@ function renderField(
   carrier: string,
   field: FieldDefinition,
   data: BenchmarkData,
-  currency: string
+  currency: string,
+  mdImageCache: Record<string, string | null> = {}
 ): string {
   const c = cell(data, carrier, field.id);
   const value = c.value;
@@ -157,10 +236,12 @@ function renderField(
     return isNaN(n) ? String(value) : `${currency} ${n.toLocaleString('es-CO')}`;
   }
 
-  // textarea / text
+  // textarea / text — incrustar imágenes markdown y formatear el resto
   if (!value) return `<span style="color:#94a3b8;">—</span>`;
-  const text = stripMd(String(value));
-  return `<div style="font-size:12px;line-height:1.6;white-space:pre-line;">${text.replace(/\n/g, '<br>')}</div>`;
+  const rawText = String(value);
+  const rendered = renderTextareaHTML(rawText, mdImageCache);
+  if (!rendered) return `<span style="color:#94a3b8;">—</span>`;
+  return `<div style="font-size:12px;line-height:1.6;">${rendered}</div>`;
 }
 
 // ─── CSS de impresión ─────────────────────────────────────────────────────────
@@ -399,9 +480,10 @@ export async function generatePDF({
   const monthName = monthNames[month];
 
   // ── Precargar todas las imágenes como base64 ────────────────────────────
-  const [bannerB64, effiLogoB64] = await Promise.all([
+  const [bannerB64, effiLogoB64, mdImageCache] = await Promise.all([
     bannerUrl ? imageToBase64(bannerUrl) : Promise.resolve(null),
     efficommerceLogoUrl ? imageToBase64(efficommerceLogoUrl) : Promise.resolve(null),
+    preloadMarkdownImages(data, carriers),
   ]);
 
   const logoCache: Record<string, string | null> = {};
@@ -514,12 +596,22 @@ export async function generatePDF({
       envioHTML = `${currency} ${Number(envio).toLocaleString('es-CO')}`;
     }
 
+    const comisionVal = cell(data, c, 'comision_recaudo').value;
+    const costoManejoVal = cell(data, c, 'costo_manejo').value;
+    const politicaPesoVal = cell(data, c, 'politica_peso').value;
+
+    const renderMdCell = (val: unknown) => {
+      if (!val) return '—';
+      const html = renderTextareaHTML(String(val), mdImageCache);
+      return html || '—';
+    };
+
     return `<tr>
       <td><div class="carrier-cell">${logo(c, 28)} <strong>${c}</strong></div></td>
       <td style="font-size:11px;">${envioHTML}</td>
-      <td>${cell(data, c, 'comision_recaudo').value || '—'}</td>
-      <td>${cell(data, c, 'costo_manejo').value || '—'}</td>
-      <td style="font-size:11px;">${cell(data, c, 'politica_peso').value || '—'}</td>
+      <td style="font-size:11px;">${renderMdCell(comisionVal)}</td>
+      <td style="font-size:11px;">${renderMdCell(costoManejoVal)}</td>
+      <td style="font-size:11px;">${politicaPesoVal || '—'}</td>
     </tr>`;
   }).join('');
 
@@ -571,7 +663,7 @@ export async function generatePDF({
 
       const isWide = f.type === 'multi-currency' || (f.type === 'textarea' && String(val || '').length > 60);
       const cc = colorClass(cl.color);
-      const valHTML = renderField(c, f, data, currency);
+      const valHTML = renderField(c, f, data, currency, mdImageCache);
       const noteHTML = cl.note && !f.hideNote
         ? `<div class="fnote">${stripMd(String(cl.note))}</div>` : '';
 
