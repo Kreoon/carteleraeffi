@@ -4,6 +4,7 @@ import { ArrowLeft, FileText, Code, Loader2, CheckCircle, XCircle, TrendingUp, T
 import { getCountryTheme } from '@/lib/countryTheme';
 import { ShareDialog } from '@/components/ShareDialog';
 import { generateFullHTML } from '@/components/HTMLExportGenerator';
+import { generatePDF } from '@/components/PDFGenerator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -159,9 +160,15 @@ export default function Report() {
       toast.success('PDF descargado correctamente', { id: toastId });
     } catch (err) {
       console.error('Error generating PDF:', err);
-      toast.error('Error al generar el PDF via servidor. Usando método alternativo...', { id: toastId });
-      // Fallback: abrir ventana de impresión del navegador con los datos ya cargados
-      setTimeout(() => window.print(), 500);
+      toast.loading('Usando generador local...', { id: toastId });
+      try {
+        // Fallback: generar PDF localmente con los datos actuales en memoria
+        await generatePDF({ country, month, year, data });
+        toast.success('PDF generado (modo local)', { id: toastId });
+      } catch (fallbackErr) {
+        console.error('Fallback PDF error:', fallbackErr);
+        toast.error('No se pudo generar el PDF', { id: toastId });
+      }
     } finally {
       setIsGeneratingPDF(false);
     }

@@ -12,12 +12,18 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Future flags de React Router v7 — eliminan warnings de migración
+const routerFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={routerFuture}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/configuracion" element={<Configuration />} />
