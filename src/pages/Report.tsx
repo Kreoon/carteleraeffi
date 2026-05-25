@@ -29,6 +29,7 @@ export default function Report() {
   const month = parseInt(searchParams.get('month') ?? String(now.getMonth()));
   const year = parseInt(searchParams.get('year') ?? String(now.getFullYear()));
   const isSavedView = searchParams.get('saved') === 'true';
+  const isNoSave = searchParams.get('nosave') === '1';
   const theme = getCountryTheme(country);
   const [shareOpen, setShareOpen] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -50,9 +51,9 @@ export default function Report() {
   const monthName = monthNames[month];
   const bannerUrl = getCountryBanner(country);
 
-  // Auto-save report when viewing (not from saved view)
+  // Auto-save report when viewing (not from saved view, not from PDF render)
   useEffect(() => {
-    if (!isSavedView && data && Object.keys(data).length > 0 && !hasSaved) {
+    if (!isSavedView && !isNoSave && data && Object.keys(data).length > 0 && !hasSaved) {
       saveReport(country, year, month, data).then((success) => {
         if (success) {
           setHasSaved(true);
@@ -60,7 +61,7 @@ export default function Report() {
         }
       });
     }
-  }, [data, country, year, month, isSavedView, saveReport, hasSaved]);
+  }, [data, country, year, month, isSavedView, isNoSave, saveReport, hasSaved]);
 
   const getCellValue = (carrier: string, fieldId: string) => {
     const cellData = data[carrier]?.[fieldId];
@@ -139,20 +140,27 @@ export default function Report() {
     setIsGeneratingPDF(true);
     const toastId = toast.loading('Generando PDF premium...');
     try {
-      const url = `/api/pdf?country=${encodeURIComponent(country)}&month=${month}&year=${year}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // POST los datos actuales para que Puppeteer los inyecte en localStorage
+      const res = await fetch('/api/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ country, month, year, data }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody?.detail || `HTTP ${res.status}`);
+      }
       const blob = await res.blob();
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `cartelera-${country.toLowerCase().replace(/\s+/g, '-')}-${monthName.toLowerCase()}-${year}.pdf`;
       link.click();
       URL.revokeObjectURL(link.href);
-      toast.success('PDF descargado', { id: toastId });
+      toast.success('PDF descargado correctamente', { id: toastId });
     } catch (err) {
       console.error('Error generating PDF:', err);
-      toast.error('Error al generar el PDF. Intentando fallback de impresión...', { id: toastId });
-      // Fallback a window.print si el endpoint falla
+      toast.error('Error al generar el PDF via servidor. Usando método alternativo...', { id: toastId });
+      // Fallback: abrir ventana de impresión del navegador con los datos ya cargados
       setTimeout(() => window.print(), 500);
     } finally {
       setIsGeneratingPDF(false);
@@ -310,7 +318,11 @@ export default function Report() {
       )}
 
       {/* Report Content */}
-      <main className="p-6 max-w-7xl mx-auto" ref={reportRef}>
+      <main
+        className="p-6 max-w-7xl mx-auto"
+        ref={reportRef}
+        data-pdf-ready={!configLoading ? 'true' : undefined}
+      >
         {/* Country Banner */}
         {bannerUrl && (
           <img 
@@ -1065,7 +1077,7 @@ export default function Report() {
               return (
                 <Card className="overflow-hidden mx-auto">
                   <CardContent className="p-0">
-                    <div className="overflow-auto max-h-[70vh] relative">
+                    <div className={`relative ${isPrintMode ? 'overflow-visible' : 'overflow-auto max-h-[70vh]'}`}>
                       <table className="w-full text-sm border-collapse">
                         <thead>
                           <tr className="border-b bg-muted/50">
