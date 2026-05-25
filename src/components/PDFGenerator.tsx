@@ -1,3 +1,10 @@
+/**
+ * PDFGenerator — Generador de PDF vía window.print()
+ *
+ * Usado como fallback cuando /api/pdf no está disponible (entorno local).
+ * Genera un documento HTML completo con imágenes en base64,
+ * diseño premium por páginas A4 y abre el diálogo de impresión.
+ */
 import {
   BenchmarkData,
   fields,
@@ -9,663 +16,749 @@ import {
   getFreightSubFields,
 } from '@/lib/data';
 
-interface PDFGeneratorProps {
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
+export interface PDFGeneratorProps {
   country: string;
   month: number;
   year: number;
   data: BenchmarkData;
+  bannerUrl?: string | null;
+  getCarrierLogo: (carrier: string) => string | null;
+  efficommerceLogoUrl?: string | null;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers de imágenes ──────────────────────────────────────────────────────
 
-/** Devuelve el valor normalizado de una celda */
-function getCellValue(data: BenchmarkData, carrier: string, fieldId: string) {
+/** Convierte una URL de imagen a base64 para incrustarla en el HTML */
+async function imageToBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** HTML de logo de transportadora (img base64 o ícono SVG placeholder) */
+function logoHTML(base64: string | null | undefined, name: string, size = 40): string {
+  if (base64) {
+    return `<img src="${base64}" alt="${name}" style="width:${size}px;height:${size}px;object-fit:contain;flex-shrink:0;" />`;
+  }
+  return `<div style="width:${size}px;height:${size}px;background:#f0f9ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <svg width="${size * 0.55}" height="${size * 0.55}" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2">
+      <rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+    </svg>
+  </div>`;
+}
+
+// ─── Helpers de datos ─────────────────────────────────────────────────────────
+
+function cell(data: BenchmarkData, carrier: string, fieldId: string) {
   return normalizeCellValue(data[carrier]?.[fieldId]);
 }
 
-/** Convierte markdown básico a texto plano para el PDF */
-function stripMarkdown(text: string): string {
+function num(data: BenchmarkData, carrier: string, fieldId: string, fallback = 0): number {
+  const v = cell(data, carrier, fieldId).value;
+  if (v === '' || v === null || v === undefined) return fallback;
+  const n = parseFloat(String(v));
+  return isNaN(n) ? fallback : n;
+}
+
+function stripMd(text: string): string {
   return text
-    .replace(/\*\*(.+?)\*\*/g, '$1')   // bold
-    .replace(/\*(.+?)\*/g, '$1')        // italic
-    .replace(/^#+\s+/gm, '')            // headings
-    .replace(/`(.+?)`/g, '$1')          // inline code
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // links
-    .replace(/^[-*]\s+/gm, '• ')        // listas
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/^#+\s+/gm, '')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+    .replace(/^[-*]\s+/gm, '• ')
     .trim();
 }
 
-/**
- * Renderiza el valor de un campo como HTML para el PDF.
- * Maneja todos los tipos: percentage, boolean, currency,
- * multi-currency (objetos), textarea/text.
- */
-function renderFieldValueHTML(
-  carrier: string,
-  field: FieldDefinition,
-  data: BenchmarkData,
-  currency: string,
-  country: string
-): string {
-  const cell = getCellValue(data, carrier, field.id);
-  const value = cell.value;
-
-  if (field.type === 'boolean') {
-    const yes = Boolean(value);
-    return `<span class="bool-${yes ? 'yes' : 'no'}">${yes ? '✓ Sí' : '✗ No'}</span>`;
-  }
-
-  if (field.type === 'percentage') {
-    const num = parseFloat(String(value ?? 0));
-    let cls = 'pct-neutral';
-    if (field.id === 'cumplimiento_ans') {
-      cls = num >= 95 ? 'pct-good' : num >= 85 ? 'pct-warn' : 'pct-bad';
-    } else if (field.id === 'devoluciones') {
-      cls = num <= 2 ? 'pct-good' : num <= 5 ? 'pct-warn' : 'pct-bad';
-    } else if (field.id === 'siniestros') {
-      cls = num <= 1 ? 'pct-good' : num <= 3 ? 'pct-warn' : 'pct-bad';
-    }
-    return `<span class="${cls}">${num}%</span>`;
-  }
-
-  if (field.type === 'currency') {
-    if (value === '' || value === null || value === undefined) return '<span class="empty">—</span>';
-    const num = Number(value);
-    if (isNaN(num)) return `<span>${String(value)}</span>`;
-    return `<span>${currency} ${num.toLocaleString('es-CO')}</span>`;
-  }
-
-  if (field.type === 'multi-currency') {
-    if (!value || (typeof value === 'string' && value.trim() === '')) {
-      return '<span class="empty">—</span>';
-    }
-
-    if (typeof value === 'object' && value !== null) {
-      const entries = Object.entries(value as Record<string, string>).filter(
-        ([, v]) => v !== '' && v !== null && v !== undefined
-      );
-      if (entries.length === 0) return '<span class="empty">—</span>';
-      const rows = entries
-        .map(
-          ([k, v]) =>
-            `<div class="sub-row"><span class="sub-key">${k}:</span> <span class="sub-val">${currency} ${Number(v || 0).toLocaleString('es-CO')}</span></div>`
-        )
-        .join('');
-      return `<div class="sub-table">${rows}</div>`;
-    }
-
-    // Fallback: valor simple
-    const num = Number(value);
-    if (!isNaN(num)) return `<span>${currency} ${num.toLocaleString('es-CO')}</span>`;
-    return `<span>${String(value)}</span>`;
-  }
-
-  // textarea / text
-  if (value === '' || value === null || value === undefined) {
-    return '<span class="empty">—</span>';
-  }
-  const text = stripMarkdown(String(value));
-  // Convertir saltos de línea en <br>
-  return `<p class="text-val">${text.replace(/\n/g, '<br>')}</p>`;
-}
-
-/** Color de borde/fondo basado en el color de la celda */
-function colorClass(color: string | undefined | null): string {
-  if (color === 'green') return 'cell-green';
-  if (color === 'yellow') return 'cell-yellow';
-  if (color === 'red') return 'cell-red';
+function colorClass(c: string | null | undefined): 'green' | 'yellow' | 'red' | '' {
+  if (c === 'green') return 'green';
+  if (c === 'yellow') return 'yellow';
+  if (c === 'red') return 'red';
   return '';
 }
 
-// ─── Generador de barra visual para comparación ───────────────────────────────
-
-function buildBarChartHTML(
-  carriers: string[],
-  data: BenchmarkData,
-  fieldId: string,
-  maxVal: number,
-  colorFn: (v: number) => string
-): string {
-  const items = carriers.map(carrier => {
-    const cell = getCellValue(data, carrier, fieldId);
-    const val = parseFloat(String(cell.value ?? 0));
-    const width = maxVal > 0 ? Math.min((val / maxVal) * 100, 100) : 0;
-    const cls = colorFn(val);
-    return `
-      <div class="bar-row">
-        <div class="bar-name">${carrier}</div>
-        <div class="bar-track">
-          <div class="bar-fill ${cls}" style="width:${width}%">
-            <span>${isNaN(val) ? '—' : val}%</span>
-          </div>
-        </div>
-      </div>`;
-  });
-  return items.join('');
+function pctColor(fieldId: string, val: number): string {
+  if (fieldId === 'cumplimiento_ans') return val >= 95 ? '#16a34a' : val >= 85 ? '#ca8a04' : '#dc2626';
+  if (fieldId === 'devoluciones') return val <= 2 ? '#16a34a' : val <= 5 ? '#ca8a04' : '#dc2626';
+  if (fieldId === 'siniestros') return val <= 1 ? '#16a34a' : val <= 3 ? '#ca8a04' : '#dc2626';
+  return '#1e293b';
 }
 
-// ─── CSS embebido ─────────────────────────────────────────────────────────────
+function statusBadge(ans: number, dev: number, sin: number): string {
+  const good = ans >= 90 && dev <= 5 && sin <= 1;
+  const warn = ans >= 80 && dev <= 10 && sin <= 3;
+  if (good) return `<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;">✓ Excelente</span>`;
+  if (warn) return `<span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;">⚠ Aceptable</span>`;
+  return `<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;">✗ Revisar</span>`;
+}
 
-const PDF_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+// ─── Renderizado de campos ────────────────────────────────────────────────────
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+function renderField(
+  carrier: string,
+  field: FieldDefinition,
+  data: BenchmarkData,
+  currency: string
+): string {
+  const c = cell(data, carrier, field.id);
+  const value = c.value;
 
-  :root {
-    --primary: #0891b2;
-    --primary-dark: #164e63;
-    --text: #1e293b;
-    --muted: #64748b;
-    --border: #e2e8f0;
-    --bg-light: #f8fafc;
-    --good: #16a34a;
-    --warn: #ca8a04;
-    --bad: #dc2626;
-    --good-bg: #f0fdf4;
-    --warn-bg: #fefce8;
-    --bad-bg: #fef2f2;
-  }
-
-  body {
-    font-family: 'Inter', Arial, sans-serif;
-    color: var(--text);
-    background: white;
-    font-size: 13px;
-    line-height: 1.55;
+  if (field.type === 'boolean') {
+    const yes = Boolean(value);
+    return yes
+      ? `<span style="color:#16a34a;font-weight:600;">✓ Sí</span>`
+      : `<span style="color:#dc2626;font-weight:600;">✗ No</span>`;
   }
 
-  /* ── Página ──────────────────────────────────── */
-  .page {
-    width: 100%;
-    padding: 32px 36px;
-    page-break-after: always;
-    break-after: page;
-  }
-  .page:last-child { page-break-after: avoid; break-after: avoid; }
-
-  /* ── Portada ─────────────────────────────────── */
-  .cover {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    text-align: center;
-    padding: 60px 40px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .cover-badge {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    background: rgba(255,255,255,0.2);
-    border-radius: 100px;
-    padding: 5px 18px;
-    margin-bottom: 28px;
-  }
-  .cover h1 {
-    font-size: 42px;
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 14px;
-  }
-  .cover h2 {
-    font-size: 26px;
-    font-weight: 500;
-    opacity: 0.9;
-    margin-bottom: 36px;
-  }
-  .cover-period {
-    font-size: 18px;
-    background: rgba(255,255,255,0.18);
-    padding: 10px 28px;
-    border-radius: 8px;
-    margin-bottom: 60px;
-    font-weight: 500;
-  }
-  .cover-logo {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 3px;
-    opacity: 0.85;
-    text-transform: uppercase;
+  if (field.type === 'percentage') {
+    const n = parseFloat(String(value ?? 0));
+    const color = pctColor(field.id, n);
+    const barPct = field.id === 'cumplimiento_ans' ? n : Math.min(n * 8, 100);
+    return `
+      <div style="text-align:center;">
+        <span style="font-size:17px;font-weight:700;color:${color};">${n}%</span>
+        <div style="margin:6px auto 0;width:90%;height:7px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
+          <div style="width:${barPct}%;height:100%;background:${color};border-radius:99px;"></div>
+        </div>
+      </div>`;
   }
 
-  /* ── Encabezados de sección ───────────────────── */
-  .section-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--primary);
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 3px solid var(--primary);
-  }
-  .section-subtitle {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--muted);
-    margin: 20px 0 10px;
+  if (field.type === 'currency') {
+    if (!value && value !== 0) return `<span style="color:#94a3b8;">—</span>`;
+    return `${currency} ${Number(value).toLocaleString('es-CO')}`;
   }
 
-  /* ── Gráficas de barras ───────────────────────── */
-  .chart-box {
-    background: var(--bg-light);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  if (field.type === 'multi-currency') {
+    if (!value) return `<span style="color:#94a3b8;">—</span>`;
+    if (typeof value === 'object' && value !== null) {
+      const entries = Object.entries(value as Record<string, string>).filter(([, v]) => v);
+      if (!entries.length) return `<span style="color:#94a3b8;">—</span>`;
+      return entries.map(([k, v]) =>
+        `<div style="display:flex;justify-content:space-between;gap:6px;font-size:11px;margin-bottom:2px;">
+          <span style="color:#64748b;">${k}:</span>
+          <span style="font-weight:600;">${currency} ${Number(v || 0).toLocaleString('es-CO')}</span>
+        </div>`
+      ).join('');
+    }
+    const n = Number(value);
+    return isNaN(n) ? String(value) : `${currency} ${n.toLocaleString('es-CO')}`;
   }
-  .chart-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 14px; }
-  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .bar-name { width: 160px; font-size: 12px; font-weight: 500; color: var(--muted); flex-shrink: 0; }
-  .bar-track { flex: 1; height: 22px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
-  .bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 8px;
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    min-width: 32px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .bar-good  { background: linear-gradient(90deg,#22c55e,#16a34a); }
-  .bar-warn  { background: linear-gradient(90deg,#facc15,#ca8a04); }
-  .bar-bad   { background: linear-gradient(90deg,#f87171,#dc2626); }
-  .bar-blue  { background: linear-gradient(90deg,#38bdf8,#0891b2); }
 
-  /* ── Tablas comparativas ──────────────────────── */
-  .cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
-  .cmp-table th {
-    background: var(--primary);
-    color: white;
-    padding: 10px 10px;
-    text-align: left;
-    font-weight: 600;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .cmp-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  .cmp-table tr:nth-child(even) td { background: var(--bg-light); }
+  // textarea / text
+  if (!value) return `<span style="color:#94a3b8;">—</span>`;
+  const text = stripMd(String(value));
+  return `<div style="font-size:12px;line-height:1.6;white-space:pre-line;">${text.replace(/\n/g, '<br>')}</div>`;
+}
 
-  /* ── Detalle por transportadora ───────────────── */
-  .carrier-header {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary-dark);
-    background: #f0f9ff;
-    padding: 14px 20px;
-    border-radius: 8px;
-    margin-bottom: 18px;
-    border-left: 4px solid var(--primary);
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .fields-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  .field-card {
-    background: var(--bg-light);
-    border-radius: 6px;
-    padding: 10px 14px;
-    border-left: 4px solid #cbd5e1;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .field-card.cell-green { border-left-color: var(--good); background: var(--good-bg); }
-  .field-card.cell-yellow { border-left-color: var(--warn); background: var(--warn-bg); }
-  .field-card.cell-red { border-left-color: var(--bad); background: var(--bad-bg); }
-  .field-card.wide { grid-column: span 2; }
+// ─── CSS de impresión ─────────────────────────────────────────────────────────
 
-  .field-label {
-    font-size: 10px;
-    color: var(--muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 5px;
-  }
-  .field-value { font-size: 13px; color: var(--text); font-weight: 500; }
-  .field-note { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 4px; }
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-  /* ── Colores de valores ───────────────────────── */
-  .bool-yes { color: var(--good); font-weight: 600; }
-  .bool-no  { color: var(--bad);  font-weight: 600; }
-  .pct-good { color: var(--good); font-weight: 700; font-size: 15px; }
-  .pct-warn { color: var(--warn); font-weight: 700; font-size: 15px; }
-  .pct-bad  { color: var(--bad);  font-weight: 700; font-size: 15px; }
-  .pct-neutral { color: var(--text); font-weight: 700; font-size: 15px; }
-  .empty    { color: #94a3b8; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
-  /* Sub-tabla para campos multi-currency */
-  .sub-table { display: flex; flex-direction: column; gap: 3px; }
-  .sub-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
-  .sub-key { color: var(--muted); }
-  .sub-val { font-weight: 600; }
+:root{
+  --p:#0891b2; --pd:#164e63;
+  --text:#1e293b; --muted:#64748b; --border:#e2e8f0;
+  --bg:#f8fafc;
+  --good:#16a34a; --goodbg:#f0fdf4;
+  --warn:#ca8a04; --warnbg:#fefce8;
+  --bad:#dc2626;  --badbg:#fef2f2;
+}
 
-  /* Texto largo */
-  .text-val { font-size: 12px; line-height: 1.6; white-space: pre-line; }
+body{
+  font-family:'Inter',Arial,sans-serif;
+  color:var(--text);
+  background:white;
+  font-size:13px;
+  line-height:1.6;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
 
-  /* ── KPI Cards resumen ────────────────────────── */
-  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-  .kpi-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-    text-align: center;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .kpi-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .kpi-value { font-size: 24px; font-weight: 700; color: var(--primary); }
-  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+/* ── Páginas ── */
+.page{
+  width:100%;
+  padding:28px 36px;
+  page-break-after:always;
+  break-after:page;
+}
+.page:last-child{page-break-after:avoid;break-after:avoid;}
 
-  /* ── Ranking ──────────────────────────────────── */
-  .ranking-list { display: flex; flex-direction: column; gap: 8px; }
-  .ranking-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .ranking-row.rank-1 { background: #fefce8; border-color: #fde68a; }
-  .ranking-row.rank-2 { background: #f8fafc; border-color: #e2e8f0; }
-  .ranking-row.rank-3 { background: #fff7ed; border-color: #fed7aa; }
-  .rank-num {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 13px; color: white; flex-shrink: 0;
-  }
-  .rank-1 .rank-num { background: #eab308; }
-  .rank-2 .rank-num { background: #94a3b8; }
-  .rank-3 .rank-num { background: #f97316; }
-  .rank-other .rank-num { background: #cbd5e1; color: var(--text); }
-  .rank-name { font-weight: 600; flex: 1; }
-  .rank-metrics { font-size: 11px; color: var(--muted); }
-  .rank-score { font-size: 20px; font-weight: 700; text-align: right; }
-  .rank-score-sub { font-size: 10px; color: var(--muted); text-align: right; }
+/* ── Portada ── */
+.cover{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:0;
+  overflow:hidden;
+  position:relative;
+}
+.cover-banner{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  opacity:.18;
+}
+.cover-overlay{
+  position:relative;
+  z-index:1;
+  background:linear-gradient(135deg,var(--p) 0%,var(--pd) 100%);
+  width:100%;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:60px 48px;
+  color:white;
+}
+.cover-logo-wrap{
+  margin-bottom:36px;
+  opacity:.95;
+}
+.cover-badge{
+  font-size:11px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;
+  background:rgba(255,255,255,.18);
+  padding:5px 20px;border-radius:99px;
+  margin-bottom:28px;
+  display:inline-block;
+}
+.cover h1{font-size:40px;font-weight:700;line-height:1.2;margin-bottom:12px;}
+.cover h2{font-size:25px;font-weight:500;opacity:.9;margin-bottom:36px;}
+.cover-period{
+  font-size:17px;font-weight:500;
+  background:rgba(255,255,255,.15);
+  padding:10px 28px;border-radius:8px;
+  margin-bottom:56px;
+}
+.cover-brand{font-size:13px;font-weight:600;letter-spacing:3px;opacity:.7;text-transform:uppercase;}
 
-  /* ── Pie de página por página ────────────────── */
-  .page-footer { text-align: center; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 14px; margin-top: 32px; }
+/* ── Sección ── */
+.section-title{
+  font-size:18px;font-weight:700;color:var(--p);
+  padding-bottom:9px;margin-bottom:18px;
+  border-bottom:3px solid var(--p);
+}
+.section-sub{
+  font-size:13px;font-weight:600;color:var(--muted);
+  margin:20px 0 10px;
+}
 
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { padding: 24px 28px; }
-    .cover { min-height: 100vh; }
-  }
+/* ── Cards ── */
+.card{
+  background:white;border-radius:10px;
+  border:1px solid var(--border);
+  padding:20px 22px;
+  margin-bottom:16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.card-title{font-size:15px;font-weight:700;margin-bottom:4px;}
+.card-desc{font-size:12px;color:var(--muted);margin-bottom:14px;}
+
+/* ── KPI grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi{
+  border:1px solid var(--border);border-radius:10px;
+  padding:16px 14px;text-align:center;
+}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.kpi-val{font-size:26px;font-weight:700;color:var(--p);}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* ── Recomendaciones ── */
+.reco-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.reco-card{
+  border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;background:white;
+}
+.reco-label{font-size:11px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.reco-content{display:flex;align-items:center;gap:12px;}
+.reco-name{font-size:15px;font-weight:700;}
+.reco-metric{font-size:12px;font-weight:500;}
+
+/* ── Ranking ── */
+.rank-row{
+  display:flex;align-items:center;gap:14px;
+  padding:10px 14px;border-radius:8px;border:1px solid var(--border);
+  margin-bottom:8px;
+}
+.rank-row.gold{background:#fefce8;border-color:#fde68a;}
+.rank-row.silver{background:#f8fafc;border-color:#e2e8f0;}
+.rank-row.bronze{background:#fff7ed;border-color:#fed7aa;}
+.rank-num{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:12px;color:white;flex-shrink:0;
+}
+.gold .rank-num{background:#eab308;}
+.silver .rank-num{background:#94a3b8;}
+.bronze .rank-num{background:#f97316;}
+.rank-other .rank-num{background:#cbd5e1;color:var(--text);}
+.rank-info{flex:1;}
+.rank-name{font-weight:600;font-size:14px;}
+.rank-stats{font-size:11px;color:var(--muted);margin-top:1px;}
+.rank-score{text-align:right;min-width:52px;}
+.rank-score-num{font-size:20px;font-weight:700;}
+.rank-score-lbl{font-size:10px;color:var(--muted);}
+
+/* ── Gráficas de barras ── */
+.chart-box{background:var(--bg);border-radius:10px;padding:18px 20px;margin-bottom:14px;}
+.chart-title{font-size:12px;font-weight:600;color:#374151;margin-bottom:14px;}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.bar-name{
+  width:150px;font-size:12px;font-weight:500;color:var(--muted);
+  flex-shrink:0;display:flex;align-items:center;gap:8px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.bar-track{flex:1;height:22px;background:#e2e8f0;border-radius:4px;overflow:hidden;}
+.bar-fill{
+  height:100%;border-radius:4px;
+  display:flex;align-items:center;justify-content:flex-end;
+  padding-right:7px;color:white;font-size:11px;font-weight:600;
+  min-width:36px;
+}
+.good-fill{background:linear-gradient(90deg,#22c55e,#16a34a);}
+.warn-fill{background:linear-gradient(90deg,#facc15,#ca8a04);}
+.bad-fill{background:linear-gradient(90deg,#f87171,#dc2626);}
+.blue-fill{background:linear-gradient(90deg,#38bdf8,#0891b2);}
+
+/* ── Tablas ── */
+.cmp-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+.cmp-table th{
+  background:var(--p);color:white;
+  padding:10px 12px;text-align:left;font-weight:600;
+}
+.cmp-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+.cmp-table tr:nth-child(even) td{background:var(--bg);}
+.cmp-table .carrier-cell{display:flex;align-items:center;gap:10px;}
+
+/* ── Detalle por transportadora ── */
+.carrier-header{
+  font-size:16px;font-weight:700;color:var(--pd);
+  background:#f0f9ff;padding:14px 18px;border-radius:8px;
+  margin-bottom:16px;
+  border-left:4px solid var(--p);
+  display:flex;align-items:center;gap:14px;
+}
+.fields-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;}
+.fcard{
+  background:var(--bg);border-radius:6px;
+  padding:10px 14px;
+  border-left:4px solid #cbd5e1;
+}
+.fcard.wide{grid-column:span 2;}
+.fcard.green{border-left-color:var(--good);background:var(--goodbg);}
+.fcard.yellow{border-left-color:var(--warn);background:var(--warnbg);}
+.fcard.red{border-left-color:var(--bad);background:var(--badbg);}
+.flabel{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
+.fval{font-size:13px;font-weight:500;}
+.fnote{font-size:11px;color:var(--muted);font-style:italic;margin-top:5px;border-top:1px solid var(--border);padding-top:4px;}
+
+/* ── Footer ── */
+.page-footer{
+  text-align:center;font-size:11px;color:var(--muted);
+  border-top:1px solid var(--border);
+  padding-top:14px;margin-top:28px;
+}
+
+@media print{
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .page{padding:20px 28px;}
+}
 `;
 
 // ─── Función principal ────────────────────────────────────────────────────────
 
-export async function generatePDF({ country, month, year, data }: PDFGeneratorProps) {
+export async function generatePDF({
+  country, month, year, data,
+  bannerUrl, getCarrierLogo, efficommerceLogoUrl,
+}: PDFGeneratorProps): Promise<void> {
+
   const carriers = carriersByCountry[country] || [];
-  const currency = currencyByCountry[country] || 'COP';
+  const currency  = currencyByCountry[country] || 'COP';
   const monthName = monthNames[month];
 
-  // Calcular KPIs generales
-  const safeNum = (v: unknown) => {
-    const n = parseFloat(String(v ?? 0));
-    return isNaN(n) ? 0 : n;
+  // ── Precargar todas las imágenes como base64 ────────────────────────────
+  const [bannerB64, effiLogoB64] = await Promise.all([
+    bannerUrl ? imageToBase64(bannerUrl) : Promise.resolve(null),
+    efficommerceLogoUrl ? imageToBase64(efficommerceLogoUrl) : Promise.resolve(null),
+  ]);
+
+  const logoCache: Record<string, string | null> = {};
+  await Promise.all(
+    carriers.map(async (c) => {
+      const url = getCarrierLogo(c);
+      logoCache[c] = url ? await imageToBase64(url) : null;
+    })
+  );
+
+  // ── Función de logo (usa caché) ─────────────────────────────────────────
+  const logo = (carrier: string, size = 40) => logoHTML(logoCache[carrier], carrier, size);
+
+  // ── KPIs generales ──────────────────────────────────────────────────────
+  const safeNum = (v: unknown) => { const n = parseFloat(String(v ?? 0)); return isNaN(n) ? 0 : n; };
+  const avgANS = carriers.length ? carriers.reduce((s, c) => s + num(data, c, 'cumplimiento_ans'), 0) / carriers.length : 0;
+  const avgDev = carriers.length ? carriers.reduce((s, c) => s + num(data, c, 'devoluciones', 0), 0) / carriers.length : 0;
+  const avgSin = carriers.length ? carriers.reduce((s, c) => s + num(data, c, 'siniestros', 0), 0) / carriers.length : 0;
+  const withExtra = carriers.filter(c =>
+    cell(data, c, 'redireccion_gratis').value ||
+    cell(data, c, 'reclame_oficina').value ||
+    cell(data, c, 'sms_gratuitos').value
+  ).length;
+
+  // ── Ranking (Dev 60% · ANS 35% · Sin 5%) ───────────────────────────────
+  const ranked = carriers.map(c => {
+    const ans = num(data, c, 'cumplimiento_ans');
+    const dev = num(data, c, 'devoluciones', 100);
+    const sin = num(data, c, 'siniestros', 100);
+    const score = ans * 0.35 + (100 - dev * 5) * 0.60 + (100 - sin * 10) * 0.05;
+    return { name: c, ans, dev, sin, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const rankClass = (i: number) => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'rank-other';
+
+  // ── Recomendaciones ─────────────────────────────────────────────────────
+  const stats = carriers.map(c => ({
+    name: c,
+    ans: num(data, c, 'cumplimiento_ans'),
+    dev: num(data, c, 'devoluciones', 100),
+    sin: num(data, c, 'siniestros', 100),
+    hasRedirect: Boolean(cell(data, c, 'redireccion_gratis').value),
+    hasPickup:   Boolean(cell(data, c, 'reclame_oficina').value),
+    hasSms:      Boolean(cell(data, c, 'sms_gratuitos').value),
+  }));
+
+  const bestOverall = [...stats].map(c => ({
+    ...c,
+    score: c.ans * 0.35 + (100 - c.dev * 5) * 0.60 + (100 - c.sin * 10) * 0.05,
+  })).sort((a, b) => b.score - a.score)[0];
+  const bestAns    = [...stats].sort((a, b) => b.ans - a.ans)[0];
+  const lowestDev  = [...stats].sort((a, b) => a.dev - b.dev)[0];
+  const lowestSin  = [...stats].sort((a, b) => a.sin - b.sin)[0];
+
+  const getAvgCost = (c: string, fieldId: string) => {
+    const v = cell(data, c, fieldId).value;
+    if (v && typeof v === 'object') {
+      const vals = Object.values(v as Record<string, string>).map(x => parseFloat(x)).filter(x => !isNaN(x) && x > 0);
+      return vals.length ? vals.reduce((s, x) => s + x, 0) / vals.length : NaN;
+    }
+    return NaN;
   };
 
-  const avgANS = carriers.length
-    ? carriers.reduce((s, c) => s + safeNum(getCellValue(data, c, 'cumplimiento_ans').value), 0) / carriers.length
-    : 0;
-  const avgDev = carriers.length
-    ? carriers.reduce((s, c) => s + safeNum(getCellValue(data, c, 'devoluciones').value), 0) / carriers.length
-    : 0;
-  const avgSin = carriers.length
-    ? carriers.reduce((s, c) => s + safeNum(getCellValue(data, c, 'siniestros').value), 0) / carriers.length
-    : 0;
+  const cheapestCon = carriers
+    .map(c => ({ name: c, cost: getAvgCost(c, 'costo_promedio_con_recaudo_detalle') }))
+    .filter(c => !isNaN(c.cost) && c.cost > 0)
+    .sort((a, b) => a.cost - b.cost)[0];
 
-  // Ranking (mismo peso que en Report.tsx: Dev 60%, ANS 35%, Sin 5%)
-  const ranked = carriers
-    .map(c => {
-      const ans = safeNum(getCellValue(data, c, 'cumplimiento_ans').value);
-      const dev = safeNum(getCellValue(data, c, 'devoluciones').value) || 100;
-      const sin = safeNum(getCellValue(data, c, 'siniestros').value) || 100;
-      const score = ans * 0.35 + (100 - dev * 5) * 0.6 + (100 - sin * 10) * 0.05;
-      return { name: c, ans, dev, sin, score };
-    })
-    .sort((a, b) => b.score - a.score);
+  const cheapestSin = carriers
+    .map(c => ({ name: c, cost: getAvgCost(c, 'costo_promedio_sin_recaudo_detalle') }))
+    .filter(c => !isNaN(c.cost) && c.cost > 0)
+    .sort((a, b) => a.cost - b.cost)[0];
 
-  // ─── Páginas por transportadora ───────────────────────────────────────────
-  const carrierPages = carriers
-    .map(carrier => {
-      const freightSubFields = getFreightSubFields(country);
-
-      // Inyectar subfields dinámicos a los campos que los necesiten
-      const resolvedFields = fields.map(f => {
-        if (f.dynamicSubFields) return { ...f, subFields: freightSubFields };
-        return f;
-      });
-
-      // Clasificar campos anchos (multi-currency o textarea con texto largo)
-      const fieldCards = resolvedFields.map(field => {
-        const cell = getCellValue(data, carrier, field.id);
-        const value = cell.value;
-        const isEmpty =
-          value === '' || value === null || value === undefined ||
-          (typeof value === 'object' &&
-            Object.values(value as Record<string, string>).every(v => !v));
-
-        // Campos anchos: multi-currency o textarea con mucho texto
-        const isWide =
-          field.type === 'multi-currency' ||
-          (field.type === 'textarea' && String(value || '').length > 80);
-
-        const cls = `field-card ${isWide ? 'wide' : ''} ${colorClass(cell.color)}`;
-        const valueHTML = renderFieldValueHTML(carrier, field, data, currency, country);
-        const noteHTML = cell.note && !field.hideNote
-          ? `<div class="field-note">${stripMarkdown(String(cell.note))}</div>`
-          : '';
-
-        if (isEmpty && !noteHTML) return ''; // omitir campos vacíos
-
-        return `
-          <div class="${cls}">
-            <div class="field-label">${field.label}</div>
-            <div class="field-value">${valueHTML}</div>
-            ${noteHTML}
-          </div>`;
-      });
-
-      return `
-        <div class="page">
-          <div class="carrier-header">🏢 ${carrier}</div>
-          <div class="fields-grid">
-            ${fieldCards.join('')}
-          </div>
-        </div>`;
-    })
-    .join('');
-
-  // ─── Barra ANS ────────────────────────────────────────────────────────────
-  const ansMax = Math.max(...carriers.map(c => safeNum(getCellValue(data, c, 'cumplimiento_ans').value)), 1);
-  const ansChart = buildBarChartHTML(
-    carriers, data, 'cumplimiento_ans', ansMax,
-    v => v >= 95 ? 'bar-good' : v >= 85 ? 'bar-warn' : 'bar-bad'
-  );
-
-  const devMax = Math.max(...carriers.map(c => safeNum(getCellValue(data, c, 'devoluciones').value)), 1);
-  const devChart = buildBarChartHTML(
-    carriers, data, 'devoluciones', devMax,
-    v => v <= 2 ? 'bar-good' : v <= 5 ? 'bar-warn' : 'bar-bad'
-  );
-
-  const sinMax = Math.max(...carriers.map(c => safeNum(getCellValue(data, c, 'siniestros').value)), 1);
-  const sinChart = buildBarChartHTML(
-    carriers, data, 'siniestros', sinMax,
-    v => v <= 1 ? 'bar-good' : v <= 3 ? 'bar-warn' : 'bar-bad'
-  );
-
-  // ─── Tabla comparativa de costos ──────────────────────────────────────────
-  const costRows = carriers.map(c => {
-    const envioCell = getCellValue(data, c, 'costo_envio_nacional');
-    const envioVal = envioCell.value;
-    let envioHTML = '—';
-    if (typeof envioVal === 'object' && envioVal !== null) {
-      const entries = Object.entries(envioVal as Record<string, string>).filter(([, v]) => v);
-      envioHTML = entries.map(([k, v]) => `${k}: ${currency} ${Number(v || 0).toLocaleString('es-CO')}`).join(' / ');
-    } else if (envioVal) {
-      envioHTML = `${currency} ${Number(envioVal || 0).toLocaleString('es-CO')}`;
-    }
-
-    const comision = String(getCellValue(data, c, 'comision_recaudo').value || '—');
-    const manejo = String(getCellValue(data, c, 'costo_manejo').value || '—');
-    const pesoPolicy = String(getCellValue(data, c, 'politica_peso').value || '—');
-
+  // ── Gráficas de barras ──────────────────────────────────────────────────
+  const buildBar = (
+    fieldId: string,
+    maxVal: number,
+    colorFn: (v: number) => string
+  ) => carriers.map(c => {
+    const v = num(data, c, fieldId, 0);
+    const w = maxVal > 0 ? Math.min((v / maxVal) * 100, 100) : 0;
+    const cls = colorFn(v);
     return `
-      <tr>
-        <td><strong>${c}</strong></td>
-        <td style="font-size:11px">${envioHTML}</td>
-        <td>${comision}</td>
-        <td>${manejo}</td>
-        <td style="font-size:11px">${pesoPolicy}</td>
-      </tr>`;
-  }).join('');
-
-  // ─── Tabla de servicios ───────────────────────────────────────────────────
-  const serviceRows = carriers.map(c => {
-    const redir = Boolean(getCellValue(data, c, 'redireccion_gratis').value);
-    const reclame = Boolean(getCellValue(data, c, 'reclame_oficina').value);
-    const sms = Boolean(getCellValue(data, c, 'sms_gratuitos').value);
-    const intentos = String(getCellValue(data, c, 'intentos_entrega').value || '—');
-    const total = Number(redir) + Number(reclame) + Number(sms);
-
-    return `
-      <tr>
-        <td><strong>${c}</strong></td>
-        <td class="${redir ? 'bool-yes' : 'bool-no'}">${redir ? '✓ Sí' : '✗ No'}</td>
-        <td class="${reclame ? 'bool-yes' : 'bool-no'}">${reclame ? '✓ Sí' : '✗ No'}</td>
-        <td class="${sms ? 'bool-yes' : 'bool-no'}">${sms ? '✓ Sí' : '✗ No'}</td>
-        <td style="text-align:center">${intentos}</td>
-        <td style="text-align:center;font-weight:700">${total}/3</td>
-      </tr>`;
-  }).join('');
-
-  // ─── Ranking HTML ─────────────────────────────────────────────────────────
-  const rankingHTML = ranked.map((r, i) => {
-    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
-    return `
-      <div class="ranking-row ${rankClass}">
-        <div class="rank-num">${i + 1}</div>
-        <div>
-          <div class="rank-name">${r.name}</div>
-          <div class="rank-metrics">ANS: ${r.ans}% | Dev: ${r.dev}% | Sin: ${r.sin}%</div>
-        </div>
-        <div style="margin-left:auto">
-          <div class="rank-score">${r.score.toFixed(0)}</div>
-          <div class="rank-score-sub">puntos</div>
+      <div class="bar-row">
+        <div class="bar-name">${logo(c, 22)} ${c}</div>
+        <div class="bar-track">
+          <div class="bar-fill ${cls}" style="width:${w}%">${v}%</div>
         </div>
       </div>`;
   }).join('');
 
-  // ─── HTML completo ────────────────────────────────────────────────────────
+  const ansMax = Math.max(...carriers.map(c => num(data, c, 'cumplimiento_ans')), 1);
+  const devMax = Math.max(...carriers.map(c => num(data, c, 'devoluciones', 0)), 1);
+  const sinMax = Math.max(...carriers.map(c => num(data, c, 'siniestros', 0)), 1);
+
+  const ansBar = buildBar('cumplimiento_ans', ansMax, v => v >= 95 ? 'good-fill' : v >= 85 ? 'warn-fill' : 'bad-fill');
+  const devBar = buildBar('devoluciones', devMax, v => v <= 2 ? 'good-fill' : v <= 5 ? 'warn-fill' : 'bad-fill');
+  const sinBar = buildBar('siniestros', sinMax, v => v <= 1 ? 'good-fill' : v <= 3 ? 'warn-fill' : 'bad-fill');
+
+  // ── Tabla de costos ─────────────────────────────────────────────────────
+  const costRows = carriers.map(c => {
+    const envio = cell(data, c, 'costo_envio_nacional').value;
+    let envioHTML = '—';
+    if (envio && typeof envio === 'object') {
+      const ent = Object.entries(envio as Record<string, string>).filter(([, v]) => v);
+      envioHTML = ent.map(([k, v]) =>
+        `<div style="font-size:11px;"><span style="color:#64748b;">${k}:</span> <b>${currency} ${Number(v || 0).toLocaleString('es-CO')}</b></div>`
+      ).join('');
+    } else if (envio) {
+      envioHTML = `${currency} ${Number(envio).toLocaleString('es-CO')}`;
+    }
+
+    return `<tr>
+      <td><div class="carrier-cell">${logo(c, 28)} <strong>${c}</strong></div></td>
+      <td style="font-size:11px;">${envioHTML}</td>
+      <td>${cell(data, c, 'comision_recaudo').value || '—'}</td>
+      <td>${cell(data, c, 'costo_manejo').value || '—'}</td>
+      <td style="font-size:11px;">${cell(data, c, 'politica_peso').value || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Tabla de servicios ──────────────────────────────────────────────────
+  const serviceRows = carriers.map(c => {
+    const rd = Boolean(cell(data, c, 'redireccion_gratis').value);
+    const ro = Boolean(cell(data, c, 'reclame_oficina').value);
+    const sm = Boolean(cell(data, c, 'sms_gratuitos').value);
+    const it = cell(data, c, 'intentos_entrega').value || '—';
+    const tot = Number(rd) + Number(ro) + Number(sm);
+    const totColor = tot === 3 ? '#0891b2' : tot >= 1 ? '#64748b' : '#dc2626';
+
+    return `<tr>
+      <td><div class="carrier-cell">${logo(c, 28)} <strong>${c}</strong></div></td>
+      <td style="text-align:center;color:${rd ? '#16a34a' : '#dc2626'};font-weight:600;">${rd ? '✓ Sí' : '✗ No'}</td>
+      <td style="text-align:center;color:${ro ? '#16a34a' : '#dc2626'};font-weight:600;">${ro ? '✓ Sí' : '✗ No'}</td>
+      <td style="text-align:center;color:${sm ? '#16a34a' : '#dc2626'};font-weight:600;">${sm ? '✓ Sí' : '✗ No'}</td>
+      <td style="text-align:center;">${it}</td>
+      <td style="text-align:center;"><span style="background:${totColor};color:white;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;">${tot}/3</span></td>
+    </tr>`;
+  }).join('');
+
+  // ── Tabla comparativa de desempeño ──────────────────────────────────────
+  const perfRows = carriers.map(c => {
+    const ansCl = cell(data, c, 'cumplimiento_ans');
+    const devCl = cell(data, c, 'devoluciones');
+    const sinCl = cell(data, c, 'siniestros');
+    const a = safeNum(ansCl.value), d = safeNum(devCl.value), s = safeNum(sinCl.value);
+    const ac = pctColor('cumplimiento_ans', a), dc = pctColor('devoluciones', d), sc = pctColor('siniestros', s);
+    return `<tr>
+      <td><div class="carrier-cell">${logo(c, 28)} <strong>${c}</strong></div></td>
+      <td style="text-align:center;font-weight:700;color:${ac};">${a}%</td>
+      <td style="text-align:center;font-weight:700;color:${dc};">${d}%</td>
+      <td style="text-align:center;font-weight:700;color:${sc};">${s}%</td>
+      <td style="text-align:center;">${statusBadge(a, d, s)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Páginas de detalle por transportadora ───────────────────────────────
+  const freightSubs = getFreightSubFields(country);
+  const resolvedFields = fields.map(f => f.dynamicSubFields ? { ...f, subFields: freightSubs } : f);
+
+  const carrierPages = carriers.map(c => {
+    const cards = resolvedFields.map(f => {
+      const cl = cell(data, c, f.id);
+      const val = cl.value;
+      const isEmpty = val === '' || val === null || val === undefined ||
+        (typeof val === 'object' && Object.values(val as Record<string, string>).every(v => !v));
+
+      const isWide = f.type === 'multi-currency' || (f.type === 'textarea' && String(val || '').length > 60);
+      const cc = colorClass(cl.color);
+      const valHTML = renderField(c, f, data, currency);
+      const noteHTML = cl.note && !f.hideNote
+        ? `<div class="fnote">${stripMd(String(cl.note))}</div>` : '';
+
+      if (isEmpty && !noteHTML) return '';
+
+      return `<div class="fcard ${isWide ? 'wide' : ''} ${cc}">
+        <div class="flabel">${f.label}</div>
+        <div class="fval">${valHTML}</div>
+        ${noteHTML}
+      </div>`;
+    }).join('');
+
+    return `
+    <div class="page">
+      <div class="carrier-header">
+        ${logo(c, 46)}
+        <div>
+          <div style="font-size:18px;font-weight:700;color:#164e63;">${c}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px;">Detalle completo de indicadores · ${monthName} ${year}</div>
+        </div>
+      </div>
+      <div class="fields-grid">${cards}</div>
+      <div class="page-footer">Cartelera de Indicadores Logísticos · ${country} · ${monthName} ${year}</div>
+    </div>`;
+  }).join('');
+
+  // ── HTML completo ────────────────────────────────────────────────────────
+
+  const recoCard = (icon: string, label: string, carrier: string, metric: string, metricColor = '#64748b') =>
+    `<div class="reco-card">
+      <div class="reco-label">${icon} ${label}</div>
+      <div class="reco-content">
+        ${logo(carrier, 38)}
+        <div>
+          <div class="reco-name">${carrier}</div>
+          <div class="reco-metric" style="color:${metricColor};">${metric}</div>
+        </div>
+      </div>
+    </div>`;
+
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Benchmark Logístico — ${country} — ${monthName} ${year}</title>
-  <style>${PDF_CSS}</style>
+  <style>${CSS}</style>
 </head>
 <body>
 
-<!-- ══════════ PORTADA ══════════ -->
+<!-- ════════ PORTADA ════════ -->
 <div class="page cover">
-  <div class="cover-badge">Reporte Logístico Oficial</div>
-  <h1>Cartelera de Indicadores Logísticos</h1>
-  <h2>${country}</h2>
-  <div class="cover-period">${monthName} ${year}</div>
-  <div class="cover-logo">Efficommerce</div>
+  <div class="cover-overlay">
+    ${bannerB64 ? `<img src="${bannerB64}" alt="" class="cover-banner" />` : ''}
+    ${effiLogoB64 ? `<div class="cover-logo-wrap"><img src="${effiLogoB64}" alt="Efficommerce" style="height:52px;object-fit:contain;opacity:.95;" /></div>` : ''}
+    <div class="cover-badge">Reporte Logístico Oficial</div>
+    <h1>Cartelera de Indicadores Logísticos</h1>
+    <h2>${country}</h2>
+    <div class="cover-period">${monthName} ${year}</div>
+    <div class="cover-brand">Efficommerce &nbsp;·&nbsp; ${new Date().getFullYear()}</div>
+  </div>
 </div>
 
-<!-- ══════════ RESUMEN EJECUTIVO ══════════ -->
+<!-- ════════ RESUMEN EJECUTIVO ════════ -->
 <div class="page">
-  <h2 class="section-title">📊 Resumen Ejecutivo</h2>
+  <h2 class="section-title">🎯 Resumen Ejecutivo — Recomendaciones</h2>
 
+  <div class="reco-grid">
+    ${recoCard('🏆', 'Mejor Desempeño General', bestOverall.name,
+        `Puntuación: ${(bestOverall as typeof bestOverall & {score:number}).score.toFixed(0)}/100`, '#64748b')}
+    ${recoCard('✅', 'Mejor Cumplimiento ANS', bestAns.name, `${bestAns.ans}% de cumplimiento`, '#16a34a')}
+    ${recoCard('📦', 'Menor Tasa de Devoluciones', lowestDev.name, `${lowestDev.dev}% devoluciones`, '#0891b2')}
+    ${recoCard('🛡️', 'Menor Tasa de Siniestros', lowestSin.name, `${lowestSin.sin}% siniestros`, '#a855f7')}
+    ${cheapestCon
+      ? recoCard('💰', 'Más Económica CON Recaudo', cheapestCon.name, `${currency} ${Math.round(cheapestCon.cost).toLocaleString('es-CO')}`, '#f97316')
+      : `<div class="reco-card"><div class="reco-label">💰 Más Económica CON Recaudo</div><p style="font-size:12px;color:#64748b;">Sin datos de costos</p></div>`}
+    ${cheapestSin
+      ? recoCard('💵', 'Más Económica SIN Recaudo', cheapestSin.name, `${currency} ${Math.round(cheapestSin.cost).toLocaleString('es-CO')}`, '#14b8a6')
+      : `<div class="reco-card"><div class="reco-label">💵 Más Económica SIN Recaudo</div><p style="font-size:12px;color:#64748b;">Sin datos de costos</p></div>`}
+  </div>
+
+  <h3 class="section-sub">📊 Indicadores Clave de Desempeño</h3>
   <div class="kpi-grid">
-    <div class="kpi-card">
+    <div class="kpi">
       <div class="kpi-label">Promedio ANS</div>
-      <div class="kpi-value">${avgANS.toFixed(1)}%</div>
+      <div class="kpi-val">${avgANS.toFixed(1)}%</div>
       <div class="kpi-sub">Meta ≥ 95%</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi">
       <div class="kpi-label">Promedio Devoluciones</div>
-      <div class="kpi-value">${avgDev.toFixed(1)}%</div>
+      <div class="kpi-val">${avgDev.toFixed(1)}%</div>
       <div class="kpi-sub">Ideal ≤ 2%</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi">
       <div class="kpi-label">Promedio Siniestros</div>
-      <div class="kpi-value">${avgSin.toFixed(2)}%</div>
+      <div class="kpi-val">${avgSin.toFixed(2)}%</div>
       <div class="kpi-sub">Ideal ≤ 1%</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Transportadoras</div>
-      <div class="kpi-value">${carriers.length}</div>
-      <div class="kpi-sub">Evaluadas</div>
+    <div class="kpi">
+      <div class="kpi-label">Con Servicios Extra</div>
+      <div class="kpi-val">${withExtra} / ${carriers.length}</div>
+      <div class="kpi-sub">Transportadoras</div>
     </div>
   </div>
 
-  <h3 class="section-subtitle">🏆 Ranking General (Dev 60% · ANS 35% · Sin 5%)</h3>
-  <div class="ranking-list">${rankingHTML}</div>
+  <h3 class="section-sub">🏆 Ranking General (Dev 60% · ANS 35% · Sin 5%)</h3>
+  ${ranked.map((r, i) => `
+    <div class="rank-row ${rankClass(i)}">
+      <div class="rank-num">${i + 1}</div>
+      ${logo(r.name, 36)}
+      <div class="rank-info">
+        <div class="rank-name">${r.name}</div>
+        <div class="rank-stats">ANS: ${r.ans}% &nbsp;|&nbsp; Dev: ${r.dev}% &nbsp;|&nbsp; Sin: ${r.sin}%</div>
+      </div>
+      <div class="rank-score">
+        <div class="rank-score-num">${r.score.toFixed(0)}</div>
+        <div class="rank-score-lbl">puntos</div>
+      </div>
+    </div>`).join('')}
 
-  <div class="page-footer">
-    Reporte generado por Efficommerce · ${monthName} ${year} · ${country}
-  </div>
+  <div class="page-footer">Cartelera de Indicadores Logísticos · ${country} · ${monthName} ${year}</div>
 </div>
 
-<!-- ══════════ COMPARACIÓN VISUAL ══════════ -->
+<!-- ════════ COMPARACIÓN VISUAL ════════ -->
 <div class="page">
   <h2 class="section-title">📈 Comparación Visual de Indicadores</h2>
 
   <div class="chart-box">
-    <div class="chart-label">✅ Cumplimiento ANS — % de entregas a tiempo (meta ≥ 95%)</div>
-    ${ansChart}
+    <div class="chart-title">✅ Cumplimiento ANS — % de entregas a tiempo (meta ≥ 95%)</div>
+    ${ansBar}
   </div>
-
   <div class="chart-box">
-    <div class="chart-label">📦 % Devoluciones — menor es mejor (ideal ≤ 2%)</div>
-    ${devChart}
+    <div class="chart-title">📦 Devoluciones — menor es mejor (ideal ≤ 2%)</div>
+    ${devBar}
   </div>
-
   <div class="chart-box">
-    <div class="chart-label">🛡️ % Siniestros — menor es mejor (ideal ≤ 1%)</div>
-    ${sinChart}
+    <div class="chart-title">🛡️ Siniestros — menor es mejor (ideal ≤ 1%)</div>
+    ${sinBar}
   </div>
 
-  <div class="page-footer">
-    Reporte generado por Efficommerce · ${monthName} ${year} · ${country}
-  </div>
+  <div class="page-footer">Cartelera de Indicadores Logísticos · ${country} · ${monthName} ${year}</div>
 </div>
 
-<!-- ══════════ TABLAS COMPARATIVAS ══════════ -->
+<!-- ════════ TABLAS COMPARATIVAS ════════ -->
 <div class="page">
-  <h2 class="section-title">💰 Tabla Comparativa de Costos</h2>
+  <h2 class="section-title">📋 Tabla Comparativa de Desempeño</h2>
 
   <table class="cmp-table">
     <thead>
       <tr>
         <th>Transportadora</th>
-        <th>Costo de Envío Nacional</th>
+        <th style="text-align:center;">ANS</th>
+        <th style="text-align:center;">Devoluciones</th>
+        <th style="text-align:center;">Siniestros</th>
+        <th style="text-align:center;">Estado</th>
+      </tr>
+    </thead>
+    <tbody>${perfRows}</tbody>
+  </table>
+
+  <h2 class="section-title" style="margin-top:24px;">✅ Matriz de Servicios Adicionales</h2>
+
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>Transportadora</th>
+        <th style="text-align:center;">Redirección Gratis</th>
+        <th style="text-align:center;">Reclame en Oficina</th>
+        <th style="text-align:center;">SMS Gratuitos</th>
+        <th style="text-align:center;">Intentos</th>
+        <th style="text-align:center;">Total</th>
+      </tr>
+    </thead>
+    <tbody>${serviceRows}</tbody>
+  </table>
+
+  <div class="page-footer">Cartelera de Indicadores Logísticos · ${country} · ${monthName} ${year}</div>
+</div>
+
+<!-- ════════ COSTOS DE FLETES ════════ -->
+<div class="page">
+  <h2 class="section-title">💰 Costos de Fletes y Políticas</h2>
+
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>Transportadora</th>
+        <th>Costo Envío Nacional</th>
         <th>% Comisión Recaudo</th>
         <th>% Costo Manejo</th>
         <th>Política de Peso</th>
@@ -674,47 +767,25 @@ export async function generatePDF({ country, month, year, data }: PDFGeneratorPr
     <tbody>${costRows}</tbody>
   </table>
 
-  <h2 class="section-title" style="margin-top:32px">🚚 Servicios y Políticas</h2>
-
-  <table class="cmp-table">
-    <thead>
-      <tr>
-        <th>Transportadora</th>
-        <th>Redirección Gratis</th>
-        <th>Reclame en Oficina</th>
-        <th>SMS Gratuitos</th>
-        <th>Intentos</th>
-        <th>Total</th>
-      </tr>
-    </thead>
-    <tbody>${serviceRows}</tbody>
-  </table>
-
-  <div class="page-footer">
-    Reporte generado por Efficommerce · ${monthName} ${year} · ${country}
-  </div>
+  <div class="page-footer">Cartelera de Indicadores Logísticos · ${country} · ${monthName} ${year}</div>
 </div>
 
-<!-- ══════════ DETALLE POR TRANSPORTADORA ══════════ -->
+<!-- ════════ DETALLE POR TRANSPORTADORA ════════ -->
 ${carrierPages}
 
 </body>
 </html>`;
 
-  // Abrir en nueva ventana e imprimir
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('Por favor permite las ventanas emergentes para generar el PDF');
+  // ── Abrir en nueva ventana e imprimir ────────────────────────────────────
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Permite ventanas emergentes para generar el PDF');
     return;
   }
 
-  printWindow.document.write(html);
-  printWindow.document.close();
+  win.document.write(html);
+  win.document.close();
 
-  // Esperar a que carguen fuentes e imágenes antes de imprimir
-  printWindow.onload = () => {
-    setTimeout(() => {
-      printWindow.print();
-    }, 800);
-  };
+  // Esperar a que carguen las fuentes Google antes de imprimir
+  win.onload = () => setTimeout(() => win.print(), 1000);
 }

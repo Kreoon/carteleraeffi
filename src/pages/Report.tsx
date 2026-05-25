@@ -163,7 +163,15 @@ export default function Report() {
       toast.loading('Usando generador local...', { id: toastId });
       try {
         // Fallback: generar PDF localmente con los datos actuales en memoria
-        await generatePDF({ country, month, year, data });
+        await generatePDF({
+          country,
+          month,
+          year,
+          data,
+          bannerUrl,
+          getCarrierLogo,
+          efficommerceLogoUrl: efficommerceLogo,
+        });
         toast.success('PDF generado (modo local)', { id: toastId });
       } catch (fallbackErr) {
         console.error('Fallback PDF error:', fallbackErr);
