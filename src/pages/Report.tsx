@@ -258,7 +258,7 @@ export default function Report() {
           <span className={`font-bold ${variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
             {numVal}%
           </span>
-          <ProgressBar value={numVal} variant={variant} size="sm" showLabel={false} />
+          <ProgressBar value={numVal} max={field.id === 'siniestros' ? (Math.max(...sinData.map(d => d.value)) || 0.1) : 100} variant={variant} size="sm" showLabel={false} />
         </div>
       );
     } else if (field.type === 'currency' || field.type === 'multi-currency') {
@@ -846,7 +846,7 @@ export default function Report() {
                   <CardDescription className="text-xs">Porcentaje de paquetes indemnizados. Ideal: ≤1%</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ComparisonBar items={sinData} max={Math.max(...sinData.map(d => d.value), 1)} valueFormatter={(v) => `${v}%`} />
+                  <ComparisonBar items={sinData} max={Math.max(...sinData.map(d => d.value)) || 0.1} valueFormatter={(v) => `${v}%`} />
                 </CardContent>
               </Card>
             </div>
@@ -965,19 +965,6 @@ export default function Report() {
                           <TooltipContent>Porcentaje de paquetes indemnizados. Ideal: ≤1%</TooltipContent>
                         </Tooltip>
                       </th>
-                      <th className="text-center p-3 font-semibold">
-                        <Tooltip>
-                          <TooltipTrigger className="cursor-help flex items-center justify-center gap-1">
-                            Estado <Info className="h-3 w-3" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-[300px]">
-                            <p className="font-semibold mb-1">Estado General de la Transportadora</p>
-                            <p><strong>Excelente:</strong> ANS ≥90%, Devoluciones ≤5%, Siniestros ≤1%</p>
-                            <p><strong>Aceptable:</strong> ANS ≥80%, Devoluciones ≤10%, Siniestros ≤3%</p>
-                            <p><strong>Revisar:</strong> No cumple los criterios mínimos, requiere análisis</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1030,33 +1017,6 @@ export default function Report() {
                             <Badge variant={colorToBadgeVariant(sinColor)} className={sinColor === 'green' ? 'bg-green-500' : ''}>
                               {sin}%
                             </Badge>
-                          </td>
-                          <td className="p-3 text-center">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge 
-                                  variant={isGood ? 'default' : isWarning ? 'secondary' : 'destructive'}
-                                  className={`gap-1 cursor-help ${isGood ? 'bg-green-500' : ''}`}
-                                >
-                                  {isGood ? (
-                                    <><CheckCircle className="h-3 w-3" /> Excelente</>
-                                  ) : isWarning ? (
-                                    <><AlertTriangle className="h-3 w-3" /> Aceptable</>
-                                  ) : (
-                                    <><XCircle className="h-3 w-3" /> Revisar</>
-                                  )}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-[320px]">
-                                {isGood ? (
-                                  <p>✅ <strong>Excelente:</strong> Cumple todos los criterios óptimos. ANS ≥90%, Devoluciones ≤5%, Siniestros ≤1%</p>
-                                ) : isWarning ? (
-                                  <p>⚠️ <strong>Aceptable:</strong> Cumple criterios mínimos pero puede mejorar. ANS ≥80%, Devoluciones ≤10%, Siniestros ≤3%</p>
-                                ) : (
-                                  <p>❌ <strong>Revisar:</strong> No cumple los criterios mínimos. Se recomienda analizar el desempeño y considerar alternativas o negociar mejoras.</p>
-                                )}
-                              </TooltipContent>
-                            </Tooltip>
                           </td>
                         </tr>
                       );
@@ -1180,7 +1140,7 @@ export default function Report() {
                                       <span className={`font-bold ${variant === 'success' ? 'text-green-600' : variant === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
                                         {numVal}%
                                       </span>
-                                      <ProgressBar value={numVal} max={100} variant={variant} size="sm" showLabel={false} />
+                                      <ProgressBar value={numVal} max={field.id === 'siniestros' ? (Math.max(...sinData.map(d => d.value)) || 0.1) : 100} variant={variant} size="sm" showLabel={false} />
                                     </div>
                                   );
                                 } else if (field.type === 'currency' || field.type === 'multi-currency') {

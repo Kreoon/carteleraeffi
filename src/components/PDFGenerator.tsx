@@ -205,7 +205,7 @@ function renderField(
   if (field.type === 'percentage') {
     const n = parseFloat(String(value ?? 0));
     const color = pctColor(field.id, n);
-    const barPct = field.id === 'cumplimiento_ans' ? n : Math.min(n * 8, 100);
+    const barPct = field.id === 'cumplimiento_ans' ? n : field.id === 'siniestros' ? Math.min((n / 3) * 100, 100) : Math.min(n * 8, 100);
     return `
       <div style="text-align:center;">
         <span style="font-size:17px;font-weight:700;color:${color};">${n}%</span>
@@ -646,7 +646,6 @@ export async function generatePDF({
       <td style="text-align:center;font-weight:700;color:${ac};">${a}%</td>
       <td style="text-align:center;font-weight:700;color:${dc};">${d}%</td>
       <td style="text-align:center;font-weight:700;color:${sc};">${s}%</td>
-      <td style="text-align:center;">${statusBadge(a, d, s)}</td>
     </tr>`;
   }).join('');
 
@@ -817,7 +816,6 @@ export async function generatePDF({
         <th style="text-align:center;">ANS</th>
         <th style="text-align:center;">Devoluciones</th>
         <th style="text-align:center;">Siniestros</th>
-        <th style="text-align:center;">Estado</th>
       </tr>
     </thead>
     <tbody>${perfRows}</tbody>

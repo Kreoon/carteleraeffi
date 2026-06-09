@@ -894,7 +894,6 @@ export async function generateFullHTML({
               <th style="text-align: center;">ANS</th>
               <th style="text-align: center;">Devoluciones</th>
               <th style="text-align: center;">Siniestros</th>
-              <th style="text-align: center;">Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -929,14 +928,6 @@ export async function generateFullHTML({
                   </td>
                   <td style="text-align: center;">
                     <span class="badge ${colorToBadge(sinColor)}">${sin}%</span>
-                  </td>
-                  <td style="text-align: center;">
-                    <span class="badge ${isGood ? 'badge-green' : isWarning ? 'badge-yellow' : 'badge-red'}">
-                      ${isGood ? '✓ Excelente' : isWarning ? '⚠ Aceptable' : '✗ Revisar'}
-                    </span>
-                    <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
-                      ${isGood ? 'Cumple todos los criterios' : isWarning ? 'Puede mejorar' : 'Requiere análisis'}
-                    </div>
                   </td>
                 </tr>
               `;
